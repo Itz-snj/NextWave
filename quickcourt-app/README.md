@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QuickCourt - Sports Facility Booking Platform
+
+QuickCourt is a comprehensive full-stack web application built with Next.js that enables sports enthusiasts to discover, book, and manage sports facilities. The platform serves three types of users: regular users who book facilities, facility owners who manage their venues, and administrators who oversee the entire platform.
+
+## Features
+
+### For Users
+- **Venue Discovery**: Browse and search sports facilities with advanced filters
+- **Easy Booking**: Real-time availability checking and instant booking
+- **Booking Management**: View, manage, and cancel bookings
+- **User Profiles**: Manage personal information and preferences
+
+### For Facility Owners
+- **Dashboard Analytics**: Comprehensive insights with charts and KPIs
+- **Facility Management**: Add and manage sports facilities
+- **Court Management**: Configure courts, pricing, and availability
+- **Booking Overview**: Monitor all bookings and customer interactions
+
+### For Administrators
+- **Platform Overview**: Global statistics and performance metrics
+- **Facility Approvals**: Review and approve new facility registrations
+- **User Management**: Monitor and manage all platform users
+- **Analytics Dashboard**: Platform-wide insights and trends
+
+## Technology Stack
+
+- **Frontend**: Next.js 14, React, TypeScript
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Charts**: Recharts for data visualization
+- **Authentication**: Custom JWT-based auth system
+- **State Management**: React Context API
+- **Icons**: Lucide React
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
 
-```bash
+### Installation
+
+1. Clone the repository:
+\`\`\`bash
+git clone <repository-url>
+cd quickcourt-app
+\`\`\`
+
+2. Install dependencies:
+\`\`\`bash
+npm install
+\`\`\`
+
+3. Start the development server:
+\`\`\`bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+\`\`\`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo Credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use these credentials to test different user roles:
 
-## Learn More
+- **Regular User**: user@demo.com / password123
+- **Facility Owner**: owner@demo.com / password123  
+- **Administrator**: admin@demo.com / password123
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+\`\`\`
+quickcourt-app/
+├── app/                    # Next.js app directory
+│   ├── auth/              # Authentication pages
+│   ├── venues/            # Venue browsing and details
+│   ├── booking/           # Booking flow
+│   ├── bookings/          # User booking management
+│   ├── owner/             # Facility owner dashboard
+│   ├── admin/             # Admin dashboard
+│   ├── profile/           # User profile management
+│   └── api/               # API routes
+├── components/            # Reusable UI components
+│   └── ui/               # shadcn/ui components
+├── contexts/             # React contexts
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions
+└── public/               # Static assets
+\`\`\`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key Features Implemented
 
-## Deploy on Vercel
+### Authentication System
+- User registration with role selection
+- Email/password login
+- OTP verification (simulated)
+- Role-based access control
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Booking System
+- Real-time availability checking
+- Time slot selection
+- Duration-based pricing
+- Mock payment processing
+- Booking confirmation and management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Dashboard Analytics
+- Interactive charts using Recharts
+- KPI widgets and metrics
+- Booking trends and revenue tracking
+- User growth analytics
+
+### Responsive Design
+- Mobile-first approach
+- Tailwind CSS for styling
+- shadcn/ui component library
+- Modern, clean interface
+
+## API Routes
+
+- `POST /api/auth/login` - User authentication
+- `POST /api/auth/signup` - User registration
+
+## Future Enhancements
+
+- Real database integration (MongoDB/PostgreSQL)
+- Actual payment gateway integration
+- Real-time notifications
+- Advanced search and filtering
+- Mobile app development
+- Email notification system
+- Review and rating system
+- Multi-language support
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
