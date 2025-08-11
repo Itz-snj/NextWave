@@ -12,19 +12,20 @@ import { ArrowLeft, MapPin, CreditCard } from "lucide-react"
 import Link from "next/link"
 
 interface TimeSlot {
+  _id?: string
   time: string
-  available: boolean
+  isAvailable: boolean
   price: number
 }
 
 interface BookingData {
   venue: {
-    id: number
+    id: string
     name: string
     location: string
   }
   court: {
-    id: number
+    id: string
     name: string
     sport: string
     pricePerHour: number
@@ -42,8 +43,8 @@ export default function BookingPage() {
   const { toast } = useToast()
 
   const [bookingData, setBookingData] = useState<BookingData>({
-    venue: { id: 0, name: "", location: "" },
-    court: { id: 0, name: "", sport: "", pricePerHour: 0 },
+    venue: { id: "", name: "", location: "" },
+    court: { id: "", name: "", sport: "", pricePerHour: 0 },
     selectedDate: null,
     selectedTimeSlot: null,
     duration: 1,
@@ -54,61 +55,35 @@ export default function BookingPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isBooking, setIsBooking] = useState(false)
 
-  // Mock time slots
-  const generateTimeSlots = (date: Date): TimeSlot[] => {
-    const slots: TimeSlot[] = []
-    const startHour = 6
-    const endHour = 23
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      const time = `${hour.toString().padStart(2, "0")}:00`
-      // Randomly make some slots unavailable for demo
-      const available = Math.random() > 0.3
-      slots.push({
-        time,
-        available,
-        price: bookingData.court.pricePerHour,
-      })
-    }
-
-    return slots
-  }
-
   useEffect(() => {
     if (!user) {
       router.push("/auth/login")
       return
     }
 
-    // Mock data - in real app, this would fetch from API
-    const mockBookingData: BookingData = {
-      venue: {
-        id: Number.parseInt(params.venueId as string),
-        name: "SportZone Arena",
-        location: "Downtown, City Center",
-      },
-      court: {
-        id: Number.parseInt(params.courtId as string),
-        name: "Badminton Court 1",
-        sport: "Badminton",
-        pricePerHour: 25,
-      },
-      selectedDate: null,
-      selectedTimeSlot: null,
-      duration: 1,
-      totalPrice: 0,
-    }
-
-    setBookingData(mockBookingData)
+    // Load venue/court basic data placeholders (could be extended to fetch details)
+    const venueId = String(params.venueId)
+    const courtId = String(params.courtId)
+    setBookingData((prev) => ({
+      ...prev,
+      venue: { id: venueId, name: "Selected Venue", location: "" },
+      court: { id: courtId, name: "Selected Court", sport: "", pricePerHour: 0 },
+    }))
     setIsLoading(false)
   }, [params, user, router])
 
   useEffect(() => {
-    if (bookingData.selectedDate) {
-      const slots = generateTimeSlots(bookingData.selectedDate)
+    const loadSlots = async () => {
+      if (!bookingData.selectedDate) return setAvailableSlots([])
+      const date = bookingData.selectedDate.toISOString().slice(0, 10)
+      // Hide past slots and clean up passed ones
+      const res = await fetch(`/api/timeslots?venue=${bookingData.venue.id}&court=${bookingData.court.id}&date=${date}&cleanup=1`)
+      const data = await res.json()
+      const slots = (data || []).map((s: any) => ({ time: s.time, price: s.price, isAvailable: s.isAvailable }))
       setAvailableSlots(slots)
     }
-  }, [bookingData.selectedDate, bookingData.court.pricePerHour])
+    loadSlots()
+  }, [bookingData.selectedDate, bookingData.venue.id, bookingData.court.id])
 
   useEffect(() => {
     if (bookingData.selectedTimeSlot && bookingData.duration) {
@@ -128,7 +103,7 @@ export default function BookingPage() {
   }
 
   const handleTimeSlotSelect = (slot: TimeSlot) => {
-    if (slot.available) {
+    if (slot.isAvailable) {
       setBookingData((prev) => ({
         ...prev,
         selectedTimeSlot: slot,
@@ -137,34 +112,24 @@ export default function BookingPage() {
   }
 
   const handleDurationChange = (duration: number) => {
-    setBookingData((prev) => ({
-      ...prev,
-      duration,
-    }))
+    setBookingData((prev) => ({ ...prev, duration }))
   }
 
   const handleBooking = async () => {
     if (!bookingData.selectedDate || !bookingData.selectedTimeSlot) {
-      toast({
-        title: "Incomplete booking",
-        description: "Please select a date and time slot",
-        variant: "destructive",
-      })
+      toast({ title: "Incomplete booking", description: "Please select a date and time slot", variant: "destructive" })
       return
     }
 
     setIsBooking(true)
 
     try {
-      // Prepare booking data for API
       const bookingPayload = {
         customerName: user?.name || "Guest User",
         customerEmail: user?.email || "guest@example.com",
         venueId: bookingData.venue.id,
         venueName: bookingData.venue.name,
         venueLocation: bookingData.venue.location,
-        venueAddress: "123 Sports Street, Downtown, City 12345",
-        venuePhone: "+1 (555) 123-4567",
         courtId: bookingData.court.id,
         courtName: bookingData.court.name,
         sport: bookingData.court.sport,
@@ -174,7 +139,6 @@ export default function BookingPage() {
         totalAmount: bookingData.totalPrice,
       }
 
-      // Call booking confirmation API
       const response = await fetch("/api/bookings/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,24 +148,13 @@ export default function BookingPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast({
-          title: "Booking confirmed! 📧",
-          description: `Your court has been booked successfully. ${result.emailSent ? "Confirmation email sent!" : "Check your email for confirmation."}`,
-        })
+        toast({ title: "Booking confirmed!", description: "Confirmation email sent!" })
         router.push("/bookings")
       } else {
-        toast({
-          title: "Booking failed",
-          description: result.message || "There was an issue processing your booking. Please try again.",
-          variant: "destructive",
-        })
+        toast({ title: "Booking failed", description: result.message || "Please try again.", variant: "destructive" })
       }
-    } catch (error) {
-      toast({
-        title: "Booking failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      })
+    } catch (_e) {
+      toast({ title: "Booking failed", description: "Something went wrong.", variant: "destructive" })
     } finally {
       setIsBooking(false)
     }
@@ -266,7 +219,7 @@ export default function BookingPage() {
                       <Badge variant="secondary">{bookingData.court.sport}</Badge>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-indigo-600">${bookingData.court.pricePerHour}/hour</div>
+                      <div className="text-lg font-bold text-indigo-600">₹{bookingData.selectedTimeSlot?.price || bookingData.court.pricePerHour}/hour</div>
                     </div>
                   </div>
                 </div>
@@ -305,18 +258,18 @@ export default function BookingPage() {
                         variant={
                           bookingData.selectedTimeSlot?.time === slot.time
                             ? "default"
-                            : slot.available
+                            : slot.isAvailable
                               ? "outline"
                               : "secondary"
                         }
-                        disabled={!slot.available}
+                        disabled={!slot.isAvailable}
                         onClick={() => handleTimeSlotSelect(slot)}
                         className="h-12"
                       >
                         <div className="text-center">
                           <div className="font-semibold">{slot.time}</div>
-                          {slot.available ? (
-                            <div className="text-xs">${slot.price}</div>
+                          {slot.isAvailable ? (
+                            <div className="text-xs">₹{slot.price}</div>
                           ) : (
                             <div className="text-xs">Booked</div>
                           )}
@@ -348,7 +301,7 @@ export default function BookingPage() {
                           <div className="font-semibold">
                             {hours} hour{hours > 1 ? "s" : ""}
                           </div>
-                          <div className="text-xs">${bookingData.court.pricePerHour * hours}</div>
+                          <div className="text-xs">₹{(bookingData.selectedTimeSlot?.price || 0) * hours}</div>
                         </div>
                       </Button>
                     ))}
@@ -405,7 +358,7 @@ export default function BookingPage() {
                     <div className="border-t pt-4">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold">Total:</span>
-                        <span className="text-2xl font-bold text-indigo-600">${bookingData.totalPrice}</span>
+                        <span className="text-2xl font-bold text-indigo-600">₹{bookingData.totalPrice}</span>
                       </div>
                     </div>
 
@@ -423,7 +376,7 @@ export default function BookingPage() {
                       ) : (
                         <>
                           <CreditCard className="h-4 w-4 mr-2" />
-                          Book & Pay ${bookingData.totalPrice}
+                          Book & Pay ₹{bookingData.totalPrice}
                         </>
                       )}
                     </Button>

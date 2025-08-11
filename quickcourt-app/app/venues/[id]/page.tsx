@@ -9,122 +9,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MapPin, Star, Clock, Users, Wifi, Car, Coffee, Dumbbell, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-interface Court {
-  id: number
+interface VenueApi {
+  _id: string
   name: string
-  sport: string
-  pricePerHour: number
-  description: string
-}
-
-interface Venue {
-  id: number
-  name: string
-  description: string
+  description?: string
   location: string
-  address: string
-  sports: string[]
-  rating: number
-  reviewCount: number
-  images: string[]
-  amenities: string[]
-  about: string
-  courts: Court[]
-  operatingHours: {
-    open: string
-    close: string
-  }
-  contact: {
-    phone: string
-    email: string
-  }
+  images?: string[]
+  amenities?: string[]
+  sports?: string[]
+  rating?: number
+  reviewCount?: number
+  priceRange: { min: number; max: number }
+  status: "approved" | "pending"
 }
 
 export default function VenueDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const [venue, setVenue] = useState<Venue | null>(null)
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [venue, setVenue] = useState<VenueApi | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Mock data - in real app, this would fetch from API
-    const mockVenue: Venue = {
-      id: Number.parseInt(params.id as string),
-      name: "SportZone Arena",
-      description: "Premium sports facility with modern amenities and professional courts",
-      location: "Downtown, City Center",
-      address: "123 Sports Street, Downtown, City 12345",
-      sports: ["Badminton", "Tennis", "Squash"],
-      rating: 4.8,
-      reviewCount: 124,
-      images: [
-        "/placeholder.svg?height=400&width=600",
-        "/placeholder.svg?height=400&width=600",
-        "/placeholder.svg?height=400&width=600",
-        "/placeholder.svg?height=400&width=600",
-        "/placeholder.svg?height=400&width=600",
-      ],
-      amenities: [
-        "Free Parking",
-        "Changing Rooms",
-        "Equipment Rental",
-        "Cafeteria",
-        "WiFi",
-        "Air Conditioning",
-        "Professional Lighting",
-        "Sound System",
-      ],
-      about: `SportZone Arena is a state-of-the-art sports facility located in the heart of downtown. 
-               We offer premium courts for badminton, tennis, and squash with professional-grade equipment 
-               and amenities. Our facility is perfect for both casual players and serious athletes looking 
-               for a top-notch sporting experience.
-               
-               Established in 2018, we have been serving the local sports community with dedication to 
-               excellence. Our courts are maintained to international standards and our staff is trained 
-               to provide the best possible experience for all our guests.`,
-      courts: [
-        {
-          id: 1,
-          name: "Badminton Court 1",
-          sport: "Badminton",
-          pricePerHour: 25,
-          description: "Professional badminton court with wooden flooring",
-        },
-        {
-          id: 2,
-          name: "Badminton Court 2",
-          sport: "Badminton",
-          pricePerHour: 25,
-          description: "Professional badminton court with wooden flooring",
-        },
-        {
-          id: 3,
-          name: "Tennis Court 1",
-          sport: "Tennis",
-          pricePerHour: 40,
-          description: "Indoor tennis court with synthetic surface",
-        },
-        {
-          id: 4,
-          name: "Squash Court 1",
-          sport: "Squash",
-          pricePerHour: 30,
-          description: "Glass-back squash court with air conditioning",
-        },
-      ],
-      operatingHours: {
-        open: "06:00",
-        close: "23:00",
-      },
-      contact: {
-        phone: "+1 (555) 123-4567",
-        email: "info@sportzonearena.com",
-      },
-    }
-
-    setVenue(mockVenue)
-    setIsLoading(false)
+    const id = params.id as string
+    setIsLoading(true)
+    fetch(`/api/venues/${id}`)
+      .then((r) => r.json())
+      .then((data) => setVenue(data))
+      .finally(() => setIsLoading(false))
   }, [params.id])
 
   const amenityIcons: { [key: string]: any } = {
@@ -147,12 +58,12 @@ export default function VenueDetailsPage() {
     )
   }
 
-  if (!venue) {
+  if (!venue || venue?.status !== "approved") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Venue not found</h2>
-          <p className="text-gray-600 mb-4">The venue you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Venue not available</h2>
+          <p className="text-gray-600 mb-4">This venue is pending approval or does not exist.</p>
           <Link href="/venues">
             <Button>Back to Venues</Button>
           </Link>
@@ -198,11 +109,11 @@ export default function VenueDetailsPage() {
               <div className="flex items-center">
                 <div className="flex items-center text-yellow-600 mr-4">
                   <Star className="h-5 w-5 fill-current mr-1" />
-                  <span className="font-semibold">{venue.rating}</span>
-                  <span className="text-gray-500 ml-1">({venue.reviewCount} reviews)</span>
+                  <span className="font-semibold">{venue.rating ?? 4.7}</span>
+                  <span className="text-gray-500 ml-1">({venue.reviewCount ?? 0} reviews)</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {venue.sports.map((sport) => (
+                  {(venue.sports || []).map((sport) => (
                     <Badge key={sport} variant="secondary">
                       {sport}
                     </Badge>
@@ -211,10 +122,9 @@ export default function VenueDetailsPage() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-600 mb-1">Operating Hours</div>
+              <div className="text-sm text-gray-600 mb-1">Price Range</div>
               <div className="flex items-center text-gray-900">
-                <Clock className="h-4 w-4 mr-1" />
-                {venue.operatingHours.open} - {venue.operatingHours.close}
+              ₹{venue.priceRange.min} - ₹{venue.priceRange.max}/hour
               </div>
             </div>
           </div>
@@ -223,31 +133,14 @@ export default function VenueDetailsPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Images and Details */}
           <div className="lg:col-span-2">
-            {/* Image Gallery */}
+            {/* Image */}
             <div className="mb-8">
               <div className="aspect-video rounded-lg overflow-hidden mb-4">
                 <img
-                  src={venue.images[selectedImageIndex] || "/placeholder.svg"}
+                  src={(venue.images && venue.images[0]) || "/placeholder.svg"}
                   alt={venue.name}
                   className="w-full h-full object-cover"
                 />
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                {venue.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImageIndex(index)}
-                    className={`aspect-video rounded-lg overflow-hidden border-2 ${
-                      selectedImageIndex === index ? "border-indigo-500" : "border-transparent"
-                    }`}
-                  >
-                    <img
-                      src={image || "/placeholder.svg"}
-                      alt={`${venue.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -265,27 +158,7 @@ export default function VenueDetailsPage() {
                     <CardTitle>About {venue.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose max-w-none">
-                      {venue.about.split("\n\n").map((paragraph, index) => (
-                        <p key={index} className="mb-4 text-gray-700 leading-relaxed">
-                          {paragraph.trim()}
-                        </p>
-                      ))}
-                    </div>
-                    <div className="mt-6 pt-6 border-t">
-                      <h4 className="font-semibold mb-2">Contact Information</h4>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p>
-                          <strong>Address:</strong> {venue.address}
-                        </p>
-                        <p>
-                          <strong>Phone:</strong> {venue.contact.phone}
-                        </p>
-                        <p>
-                          <strong>Email:</strong> {venue.contact.email}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="text-gray-700 leading-relaxed">{venue.description}</p>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -297,7 +170,7 @@ export default function VenueDetailsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
-                      {venue.amenities.map((amenity) => {
+                      {(venue.amenities || []).map((amenity) => {
                         const IconComponent = amenityIcons[amenity] || Clock
                         return (
                           <div key={amenity} className="flex items-center space-x-3">
@@ -316,59 +189,11 @@ export default function VenueDetailsPage() {
                   <CardHeader>
                     <CardTitle>Customer Reviews</CardTitle>
                     <CardDescription>
-                      {venue.reviewCount} reviews with an average rating of {venue.rating}/5
+                      {venue.reviewCount ?? 0} reviews with an average rating of {venue.rating ?? 4.7}/5
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {/* Mock reviews */}
-                      <div className="border-b pb-4">
-                        <div className="flex items-center mb-2">
-                          <div className="flex text-yellow-400 mr-2">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} className="h-4 w-4 fill-current" />
-                            ))}
-                          </div>
-                          <span className="font-semibold">John D.</span>
-                          <span className="text-gray-500 ml-2">2 days ago</span>
-                        </div>
-                        <p className="text-gray-700">
-                          Excellent facility with top-notch courts. The badminton courts are well-maintained and the
-                          staff is very helpful. Definitely coming back!
-                        </p>
-                      </div>
-                      <div className="border-b pb-4">
-                        <div className="flex items-center mb-2">
-                          <div className="flex text-yellow-400 mr-2">
-                            {[...Array(4)].map((_, i) => (
-                              <Star key={i} className="h-4 w-4 fill-current" />
-                            ))}
-                            <Star className="h-4 w-4 text-gray-300" />
-                          </div>
-                          <span className="font-semibold">Sarah M.</span>
-                          <span className="text-gray-500 ml-2">1 week ago</span>
-                        </div>
-                        <p className="text-gray-700">
-                          Great courts and amenities. The only downside is that it can get quite busy during peak hours.
-                          Book in advance!
-                        </p>
-                      </div>
-                      <div>
-                        <div className="flex items-center mb-2">
-                          <div className="flex text-yellow-400 mr-2">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} className="h-4 w-4 fill-current" />
-                            ))}
-                          </div>
-                          <span className="font-semibold">Mike R.</span>
-                          <span className="text-gray-500 ml-2">2 weeks ago</span>
-                        </div>
-                        <p className="text-gray-700">
-                          Perfect for tennis! The courts are professional quality and the equipment rental service is
-                          convenient. Highly recommended.
-                        </p>
-                      </div>
-                    </div>
+                    <div className="text-sm text-gray-600">Reviews coming soon.</div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -379,52 +204,11 @@ export default function VenueDetailsPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-8">
               <CardHeader>
-                <CardTitle>Available Courts</CardTitle>
+                <CardTitle>Book this Venue</CardTitle>
                 <CardDescription>Select a court to book your session</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {venue.courts.map((court) => (
-                    <div key={court.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-semibold">{court.name}</h4>
-                          <p className="text-sm text-gray-600">{court.description}</p>
-                        </div>
-                        <Badge variant="outline">{court.sport}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-indigo-600">${court.pricePerHour}/hour</span>
-                        <Link href={`/booking/${venue.id}/${court.id}`}>
-                          <Button size="sm">Book Now</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-semibold mb-2">Quick Info</h4>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Operating Hours:</span>
-                      <span>
-                        {venue.operatingHours.open} - {venue.operatingHours.close}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Average Rating:</span>
-                      <span className="flex items-center">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current mr-1" />
-                        {venue.rating}/5
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Reviews:</span>
-                      <span>{venue.reviewCount}</span>
-                    </div>
-                  </div>
-                </div>
+                <div className="space-y-2 text-sm text-gray-600">Booking integration coming soon.</div>
               </CardContent>
             </Card>
           </div>

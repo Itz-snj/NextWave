@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { dbConnect, User } from "@/lib/utils"
+import { dbConnect, User } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password: hashedPassword,
-      role: role || "user",
+      role: role || "user" || "owner" || "admin",
       isVerified: false,
     });
 
