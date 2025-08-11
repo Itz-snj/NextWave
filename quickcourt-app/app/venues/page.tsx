@@ -9,142 +9,67 @@ import { Badge } from "@/components/ui/badge"
 import { MapPin, Star, Search, Filter } from "lucide-react"
 import Link from "next/link"
 
-interface Venue {
-  id: number
+interface VenueApi {
+  _id: string
   name: string
-  description: string
+  description?: string
   location: string
-  sports: string[]
+  sports?: string[]
   priceRange: { min: number; max: number }
-  rating: number
-  reviewCount: number
-  image: string
-  amenities: string[]
+  rating?: number
+  reviewCount?: number
+  image?: string
+  amenities?: string[]
   status: "approved" | "pending"
 }
 
 export default function VenuesPage() {
-  const [venues, setVenues] = useState<Venue[]>([])
-  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([])
+  const [venues, setVenues] = useState<VenueApi[]>([])
+  const [filteredVenues, setFilteredVenues] = useState<VenueApi[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sportFilter, setSportFilter] = useState("all")
   const [priceFilter, setPriceFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
 
-  // Mock data - in real app, this would come from API
+  // Load from API
   useEffect(() => {
-    const mockVenues: Venue[] = [
-      {
-        id: 1,
-        name: "SportZone Arena",
-        description: "Premium sports facility with modern amenities",
-        location: "Downtown, City Center",
-        sports: ["Badminton", "Tennis", "Squash"],
-        priceRange: { min: 25, max: 45 },
-        rating: 4.8,
-        reviewCount: 124,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Changing Rooms", "Equipment Rental", "Cafeteria"],
-        status: "approved",
-      },
-      {
-        id: 2,
-        name: "Elite Courts",
-        description: "Professional basketball and volleyball courts",
-        location: "Midtown Sports Complex",
-        sports: ["Basketball", "Volleyball"],
-        priceRange: { min: 30, max: 50 },
-        rating: 4.6,
-        reviewCount: 89,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Changing Rooms", "Air Conditioning", "Sound System"],
-        status: "approved",
-      },
-      {
-        id: 3,
-        name: "Green Turf",
-        description: "Outdoor football and cricket grounds",
-        location: "Suburbs, Green Valley",
-        sports: ["Football", "Cricket"],
-        priceRange: { min: 40, max: 80 },
-        rating: 4.9,
-        reviewCount: 156,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Floodlights", "Scoreboard", "Seating"],
-        status: "approved",
-      },
-      {
-        id: 4,
-        name: "AquaFit Center",
-        description: "Swimming pool and water sports facility",
-        location: "Westside, Marina District",
-        sports: ["Swimming", "Water Polo"],
-        priceRange: { min: 20, max: 35 },
-        rating: 4.5,
-        reviewCount: 67,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Changing Rooms", "Lockers", "Pool Equipment"],
-        status: "approved",
-      },
-      {
-        id: 5,
-        name: "Fitness Hub",
-        description: "Multi-sport indoor facility",
-        location: "Eastside, Business District",
-        sports: ["Table Tennis", "Badminton", "Gym"],
-        priceRange: { min: 15, max: 30 },
-        rating: 4.3,
-        reviewCount: 92,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Equipment Rental", "Trainer Available", "Juice Bar"],
-        status: "approved",
-      },
-      {
-        id: 6,
-        name: "Tennis Academy",
-        description: "Professional tennis courts with coaching",
-        location: "Northside, Hill View",
-        sports: ["Tennis"],
-        priceRange: { min: 35, max: 60 },
-        rating: 4.7,
-        reviewCount: 78,
-        image: "/placeholder.svg?height=200&width=300",
-        amenities: ["Parking", "Pro Shop", "Coaching", "Tournament Facilities"],
-        status: "approved",
-      },
-    ]
-
-    setVenues(mockVenues)
-    setFilteredVenues(mockVenues)
-    setIsLoading(false)
+    setIsLoading(true)
+    fetch("/api/venues")
+      .then((r) => r.json())
+      .then((data: VenueApi[]) => {
+        const approved = data.filter((v) => v.status === "approved")
+        setVenues(approved)
+        setFilteredVenues(approved)
+      })
+      .finally(() => setIsLoading(false))
   }, [])
 
   // Filter venues based on search and filters
   useEffect(() => {
-    let filtered = venues.filter((venue) => venue.status === "approved")
+    let filtered = venues
 
     if (searchTerm) {
       filtered = filtered.filter(
         (venue) =>
           venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          venue.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          venue.sports.some((sport) => sport.toLowerCase().includes(searchTerm.toLowerCase())),
+          (venue.location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (venue.sports || []).some((sport) => sport.toLowerCase().includes(searchTerm.toLowerCase())),
       )
     }
 
     if (sportFilter !== "all") {
-      filtered = filtered.filter((venue) => venue.sports.includes(sportFilter))
+      filtered = filtered.filter((venue) => (venue.sports || []).includes(sportFilter))
     }
 
     if (priceFilter !== "all") {
       filtered = filtered.filter((venue) => {
         switch (priceFilter) {
           case "low":
-            return venue.priceRange.max <= 30
+            return (venue.priceRange?.max ?? 0) <= 30
           case "medium":
-            return venue.priceRange.min <= 50 && venue.priceRange.max > 30
+            return (venue.priceRange?.min ?? 0) <= 50 && (venue.priceRange?.max ?? 0) > 30
           case "high":
-            return venue.priceRange.min > 50
+            return (venue.priceRange?.min ?? 0) > 50
           default:
             return true
         }
@@ -154,7 +79,7 @@ export default function VenuesPage() {
     setFilteredVenues(filtered)
   }, [venues, searchTerm, sportFilter, priceFilter])
 
-  const allSports = Array.from(new Set(venues.flatMap((venue) => venue.sports)))
+  const allSports = Array.from(new Set(venues.flatMap((venue) => venue.sports || [])))
 
   if (isLoading) {
     return (
@@ -247,25 +172,23 @@ export default function VenuesPage() {
 
         {/* Results Count */}
         <div className="mb-6">
-          <p className="text-gray-600">
-            Showing {filteredVenues.length} of {venues.length} venues
-          </p>
+          <p className="text-gray-600">Showing {filteredVenues.length} of {venues.length} venues</p>
         </div>
 
         {/* Venues Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVenues.map((venue) => (
-            <Card key={venue.id} className="hover:shadow-lg transition-shadow">
+            <Card key={venue._id} className="hover:shadow-lg transition-shadow">
               <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                <img src={venue.image || "/placeholder.svg"} alt={venue.name} className="w-full h-full object-cover" />
+                <img src={(venue as any).images?.[0] || venue.image || "/placeholder.svg"} alt={venue.name} className="w-full h-full object-cover" />
               </div>
               <CardHeader>
                 <CardTitle className="flex justify-between items-start">
                   <span className="text-lg">{venue.name}</span>
                   <div className="flex items-center text-sm text-yellow-600">
                     <Star className="h-4 w-4 fill-current mr-1" />
-                    {venue.rating}
-                    <span className="text-gray-500 ml-1">({venue.reviewCount})</span>
+                    {venue.rating ?? 4.7}
+                    <span className="text-gray-500 ml-1">({venue.reviewCount ?? 0})</span>
                   </div>
                 </CardTitle>
                 <CardDescription>
@@ -275,31 +198,31 @@ export default function VenuesPage() {
                   </div>
                   <p className="text-sm mb-3">{venue.description}</p>
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {venue.sports.map((sport) => (
+                    {(venue.sports || []).map((sport) => (
                       <Badge key={sport} variant="secondary" className="text-xs">
                         {sport}
                       </Badge>
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-1 mb-3">
-                    {venue.amenities.slice(0, 3).map((amenity) => (
+                    {(venue.amenities || []).slice(0, 3).map((amenity) => (
                       <Badge key={amenity} variant="outline" className="text-xs">
                         {amenity}
                       </Badge>
                     ))}
-                    {venue.amenities.length > 3 && (
+                    {(venue.amenities || []).length > 3 && (
                       <Badge variant="outline" className="text-xs">
-                        +{venue.amenities.length - 3} more
+                        +{(venue.amenities || []).length - 3} more
                       </Badge>
                     )}
                   </div>
                   <div className="text-lg font-semibold text-indigo-600">
-                    ${venue.priceRange.min}-${venue.priceRange.max}/hour
+                    ${venue.priceRange?.min ?? 0}-${venue.priceRange?.max ?? 0}/hour
                   </div>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href={`/venues/${venue.id}`}>
+                <Link href={`/venues/${venue._id}`}>
                   <Button className="w-full">View Details & Book</Button>
                 </Link>
               </CardContent>

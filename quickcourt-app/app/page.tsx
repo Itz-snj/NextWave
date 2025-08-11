@@ -2,16 +2,33 @@
 
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Clock, Star, Users } from "lucide-react"
 import Link from "next/link"
 import { EmailTestPanel } from "@/components/email-test-panel"
 
+interface VenueApi {
+  _id: string
+  name: string
+  description?: string
+  location: string
+  sports?: string[]
+  priceRange: { min: number; max: number }
+  rating?: number
+  reviewCount?: number
+  image?: string
+  images?: string[]
+  amenities?: string[]
+  status: "approved" | "pending"
+}
+
 export default function HomePage() {
   const { user } = useAuth()
   const router = useRouter()
+  const [popularVenues, setPopularVenues] = useState<VenueApi[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -30,35 +47,17 @@ export default function HomePage() {
     }
   }, [user, router])
 
-  const popularVenues = [
-    {
-      id: 1,
-      name: "SportZone Arena",
-      sports: ["Badminton", "Tennis"],
-      price: 25,
-      location: "Downtown",
-      rating: 4.8,
-      image: "/placeholder.svg?height=200&width=300",
-    },
-    {
-      id: 2,
-      name: "Elite Courts",
-      sports: ["Basketball", "Volleyball"],
-      price: 30,
-      location: "Midtown",
-      rating: 4.6,
-      image: "/placeholder.svg?height=200&width=300",
-    },
-    {
-      id: 3,
-      name: "Green Turf",
-      sports: ["Football", "Cricket"],
-      price: 40,
-      location: "Suburbs",
-      rating: 4.9,
-      image: "/placeholder.svg?height=200&width=300",
-    },
-  ]
+  // Fetch approved venues for popular venues section
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/venues")
+      .then((r) => r.json())
+      .then((data: VenueApi[]) => {
+        const approved = data.filter((v) => v.status === "approved").slice(0, 3)
+        setPopularVenues(approved)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   if (!user) {
     return (
@@ -207,47 +206,73 @@ export default function HomePage() {
         {/* Popular Venues */}
         <section>
           <h3 className="text-2xl font-bold mb-6">Popular Venues</h3>
-          <div className="grid md:grid-cols-3 gap-6">
-            {popularVenues.map((venue) => (
-              <Card key={venue.id} className="hover:shadow-lg transition-shadow">
-                <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                  <img
-                    src={venue.image || "/placeholder.svg"}
-                    alt={venue.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-start">
-                    <span>{venue.name}</span>
-                    <div className="flex items-center text-sm text-yellow-600">
-                      <Star className="h-4 w-4 fill-current mr-1" />
-                      {venue.rating}
-                    </div>
-                  </CardTitle>
-                  <CardDescription>
-                    <div className="flex items-center text-gray-600 mb-2">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {venue.location}
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {venue.sports.map((sport) => (
-                        <span key={sport} className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">
-                          {sport}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="text-lg font-semibold text-indigo-600">From ${venue.price}/hour</div>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Link href={`/venues/${venue.id}`}>
-                    <Button className="w-full">View Details</Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+                  <CardHeader>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : popularVenues.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {popularVenues.map((venue) => (
+                <Card key={venue._id} className="hover:shadow-lg transition-shadow">
+                  <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={(venue.images && venue.images[0]) || venue.image || "/placeholder.svg"}
+                      alt={venue.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="flex justify-between items-start">
+                      <span>{venue.name}</span>
+                      <div className="flex items-center text-sm text-yellow-600">
+                        <Star className="h-4 w-4 fill-current mr-1" />
+                        {venue.rating ?? 4.5}
+                      </div>
+                    </CardTitle>
+                    <CardDescription>
+                      <div className="flex items-center text-gray-600 mb-2">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {venue.location}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {(venue.sports || []).map((sport) => (
+                          <span key={sport} className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">
+                            {sport}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-lg font-semibold text-indigo-600">
+                        From ₹{venue.priceRange?.min ?? 0}/hour
+                      </div>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link href={`/venues/${venue._id}`}>
+                      <Button className="w-full">View Details</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 mb-4">No venues available yet.</p>
+              <Link href="/venues">
+                <Button>Browse All Venues</Button>
+              </Link>
+            </div>
+          )}
         </section>
         {process.env.NODE_ENV === "development" && (
           <section className="mt-16">

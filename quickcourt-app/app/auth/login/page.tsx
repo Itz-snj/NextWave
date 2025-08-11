@@ -100,13 +100,13 @@ export default function LoginPage() {
             <h4 className="font-semibold text-sm mb-2">Demo Credentials:</h4>
             <div className="text-xs space-y-1">
               <p>
-                <strong>User:</strong> user@demo.com / password123
+                <strong>User:</strong> zeelbarvaliya19@gmail.com / zeel123
               </p>
               <p>
-                <strong>Owner:</strong> owner@demo.com / password123
+                <strong>Owner:</strong> owner@demo.com / owner123
               </p>
               <p>
-                <strong>Admin:</strong> admin@demo.com / password123
+                <strong>Admin:</strong> admin@demo.com / admin123
               </p>
             </div>
           </div>

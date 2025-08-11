@@ -61,9 +61,7 @@ npm run dev
 
 Use these credentials to test different user roles:
 
-- **Regular User**: user@demo.com / password123
-- **Facility Owner**: owner@demo.com / password123  
-- **Administrator**: admin@demo.com / password123
+
 
 ## Project Structure
 
