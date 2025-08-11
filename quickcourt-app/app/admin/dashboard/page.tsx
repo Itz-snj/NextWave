@@ -32,6 +32,26 @@ interface AdminStats {
   totalCourts: number
   pendingApprovals: number
   monthlyRevenue: number
+  userGrowth: Array<{ month: string; users: number; owners: number }>
+  bookingActivity: Array<{ month: string; bookings: number }>
+  sportPopularity: Array<{ name: string; value: number; color: string }>
+  revenueData: Array<{ month: string; revenue: number }>
+  recentVenues: Array<{
+    id: string
+    name: string
+    location: string
+    courtCount: number
+    status: string
+    ownerName: string
+    createdAt: string
+  }>
+}
+
+interface SystemAlert {
+  type: 'warning' | 'info' | 'success'
+  title: string
+  message: string
+  icon: string
 }
 
 export default function AdminDashboard() {
@@ -44,44 +64,15 @@ export default function AdminDashboard() {
     totalCourts: 0,
     pendingApprovals: 0,
     monthlyRevenue: 0,
+    userGrowth: [],
+    bookingActivity: [],
+    sportPopularity: [],
+    revenueData: [],
+    recentVenues: []
   })
+  const [alerts, setAlerts] = useState<SystemAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
-
-  // Mock chart data
-  const userGrowth = [
-    { month: "Jan", users: 120, owners: 15 },
-    { month: "Feb", users: 145, owners: 18 },
-    { month: "Mar", users: 168, owners: 22 },
-    { month: "Apr", users: 195, owners: 25 },
-    { month: "May", users: 220, owners: 28 },
-    { month: "Jun", users: 248, owners: 32 },
-  ]
-
-  const bookingActivity = [
-    { month: "Jan", bookings: 450 },
-    { month: "Feb", bookings: 520 },
-    { month: "Mar", bookings: 480 },
-    { month: "Apr", bookings: 610 },
-    { month: "May", bookings: 550 },
-    { month: "Jun", bookings: 670 },
-  ]
-
-  const sportPopularity = [
-    { name: "Badminton", value: 35, color: "#8884d8" },
-    { name: "Tennis", value: 25, color: "#82ca9d" },
-    { name: "Basketball", value: 20, color: "#ffc658" },
-    { name: "Football", value: 15, color: "#ff7300" },
-    { name: "Others", value: 5, color: "#00ff00" },
-  ]
-
-  const revenueData = [
-    { month: "Jan", revenue: 12500 },
-    { month: "Feb", revenue: 14200 },
-    { month: "Mar", revenue: 13800 },
-    { month: "Apr", revenue: 16500 },
-    { month: "May", revenue: 15200 },
-    { month: "Jun", revenue: 18900 },
-  ]
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -89,18 +80,39 @@ export default function AdminDashboard() {
       return
     }
 
-    // Mock data
-    const mockStats: AdminStats = {
-      totalUsers: 248,
-      totalOwners: 32,
-      totalBookings: 1456,
-      totalCourts: 128,
-      pendingApprovals: 5,
-      monthlyRevenue: 18900,
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Fetch stats and alerts in parallel
+        const [statsResponse, alertsResponse] = await Promise.all([
+          fetch('/api/admin/stats'),
+          fetch('/api/admin/alerts')
+        ])
+
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch statistics')
+        }
+
+        if (!alertsResponse.ok) {
+          throw new Error('Failed to fetch alerts')
+        }
+
+        const statsData = await statsResponse.json()
+        const alertsData = await alertsResponse.json()
+
+        setStats(statsData)
+        setAlerts(alertsData.alerts || [])
+      } catch (err) {
+        console.error('Error fetching admin data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setStats(mockStats)
-    setIsLoading(false)
+    fetchData()
   }, [user, router])
 
   if (isLoading) {
@@ -109,6 +121,21 @@ export default function AdminDashboard() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <AlertCircle className="h-16 w-16 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
         </div>
       </div>
     )
@@ -256,7 +283,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={userGrowth}>
+                <LineChart data={stats.userGrowth}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -276,7 +303,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={bookingActivity}>
+                <AreaChart data={stats.bookingActivity}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -297,16 +324,16 @@ export default function AdminDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={sportPopularity}
+                    data={stats.sportPopularity}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {sportPopularity.map((entry, index) => (
+                    {stats.sportPopularity.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -324,7 +351,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
+                <BarChart data={stats.revenueData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -346,27 +373,24 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Elite Sports Complex</h4>
-                    <p className="text-sm text-gray-600">Downtown • 6 courts</p>
+                {stats.recentVenues.length > 0 ? (
+                  stats.recentVenues.map((venue) => (
+                    <div key={venue.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <h4 className="font-semibold">{venue.name}</h4>
+                        <p className="text-sm text-gray-600">{venue.location} • {venue.courtCount} courts</p>
+                        <p className="text-xs text-gray-500">Owner: {venue.ownerName}</p>
+                      </div>
+                      <Badge variant={venue.status === 'pending' ? 'outline' : 'default'}>
+                        {venue.status}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    No pending venue approvals
                   </div>
-                  <Badge variant="outline">Pending</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Fitness Hub Pro</h4>
-                    <p className="text-sm text-gray-600">Midtown • 4 courts</p>
-                  </div>
-                  <Badge variant="default">Approved</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">AquaFit Center</h4>
-                    <p className="text-sm text-gray-600">Westside • 2 pools</p>
-                  </div>
-                  <Badge variant="default">Approved</Badge>
-                </div>
+                )}
               </div>
               <div className="mt-4 text-center">
                 <Link href="/admin/facilities">
@@ -384,27 +408,62 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-start space-x-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-yellow-800">High Booking Volume</h4>
-                    <p className="text-sm text-yellow-700">Booking volume is 40% higher than usual this week</p>
+                {alerts.length > 0 ? (
+                  alerts.map((alert, index) => {
+                    const getAlertStyles = () => {
+                      switch (alert.type) {
+                        case 'warning':
+                          return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+                        case 'info':
+                          return 'bg-blue-50 border-blue-200 text-blue-800';
+                        case 'success':
+                          return 'bg-green-50 border-green-200 text-green-800';
+                        default:
+                          return 'bg-gray-50 border-gray-200 text-gray-800';
+                      }
+                    };
+
+                    const getIconColor = () => {
+                      switch (alert.type) {
+                        case 'warning':
+                          return 'text-yellow-600';
+                        case 'info':
+                          return 'text-blue-600';
+                        case 'success':
+                          return 'text-green-600';
+                        default:
+                          return 'text-gray-600';
+                      }
+                    };
+
+                    const getIcon = () => {
+                      switch (alert.icon) {
+                        case 'AlertCircle':
+                          return <AlertCircle className={`h-5 w-5 ${getIconColor()} mt-0.5`} />;
+                        case 'Users':
+                          return <Users className={`h-5 w-5 ${getIconColor()} mt-0.5`} />;
+                        case 'TrendingUp':
+                          return <TrendingUp className={`h-5 w-5 ${getIconColor()} mt-0.5`} />;
+                        default:
+                          return <AlertCircle className={`h-5 w-5 ${getIconColor()} mt-0.5`} />;
+                      }
+                    };
+
+                    return (
+                      <div key={index} className={`flex items-start space-x-3 p-3 border rounded-lg ${getAlertStyles()}`}>
+                        {getIcon()}
+                        <div>
+                          <h4 className="font-semibold">{alert.title}</h4>
+                          <p className="text-sm opacity-80">{alert.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    No system alerts at this time
                   </div>
-                </div>
-                <div className="flex items-start space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <Users className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-blue-800">New User Milestone</h4>
-                    <p className="text-sm text-blue-700">Platform has reached 250+ registered users</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-green-800">Revenue Growth</h4>
-                    <p className="text-sm text-green-700">Monthly revenue increased by 24% this month</p>
-                  </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>

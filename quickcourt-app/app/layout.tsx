@@ -4,7 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { Toaster } from "@/components/ui/toaster"
-import ChatWidget from "@/components/chat-widget"
+import ConditionalChatWidget from "@/components/conditional-chat-widget"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,7 +25,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster />
-          <ChatWidget />
+          <ConditionalChatWidget />
         </AuthProvider>
       </body>
     </html>
