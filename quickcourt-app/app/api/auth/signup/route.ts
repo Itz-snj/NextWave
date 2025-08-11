@@ -1,23 +1,43 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { dbConnect, User } from "@/lib/utils"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
-    const userData = await request.json()
+    await dbConnect();
+    const userData = await request.json();
+    const { name, email, password, role } = userData;
 
-    // Mock signup process
-    console.log("New user signup:", userData)
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
-    // In a real app, you would:
-    // 1. Validate the data
-    // 2. Hash the password
-    // 3. Save to database
-    // 4. Send OTP email
+    // Check if user already exists
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return NextResponse.json({ error: "User already exists" }, { status: 409 });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || "user",
+      isVerified: false,
+    });
+
+    // TODO: Send OTP email here
 
     return NextResponse.json({
       message: "User created successfully. Please verify your email.",
-      userId: `mock-user-${Date.now()}`,
-    })
+      userId: user._id,
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

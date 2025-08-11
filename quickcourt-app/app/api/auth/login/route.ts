@@ -1,58 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Mock user database
-const mockUsers = [
-  {
-    id: "1",
-    name: "John User",
-    email: "user@demo.com",
-    password: "password123",
-    role: "user",
-    isVerified: true,
-  },
-  {
-    id: "2",
-    name: "Jane Owner",
-    email: "owner@demo.com",
-    password: "password123",
-    role: "owner",
-    isVerified: true,
-  },
-  {
-    id: "3",
-    name: "Admin User",
-    email: "admin@demo.com",
-    password: "password123",
-    role: "admin",
-    isVerified: true,
-  },
-]
+import { dbConnect, User } from "@/lib/utils"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    await dbConnect();
+    const { email, password } = await request.json();
 
-    // Find user
-    const user = mockUsers.find((u) => u.email === email && u.password === password)
-
+    // Find user in MongoDB
+    const user = await User.findOne({ email });
     if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Mock JWT token
-    const token = `mock-jwt-token-${user.id}`
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // Mock JWT token (replace with real JWT in production)
+    const token = `mock-jwt-token-${user._id}`;
 
     return NextResponse.json({
       user: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         isVerified: user.isVerified,
       },
       token,
-    })
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
