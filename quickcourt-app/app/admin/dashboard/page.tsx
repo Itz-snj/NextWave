@@ -201,12 +201,14 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </Link>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="h-8 w-8 text-indigo-600 mx-auto mb-2" />
-              <h3 className="font-semibold">Moderation</h3>
-            </CardContent>
-          </Card>
+          <Link href="/admin/moderation">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6 text-center">
+                <AlertCircle className="h-8 w-8 text-indigo-600 mx-auto mb-2" />
+                <h3 className="font-semibold">Moderation</h3>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* KPI Cards */}
