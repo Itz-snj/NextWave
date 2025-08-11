@@ -80,3 +80,16 @@ TimeSlotSchema.index({ court: 1, date: 1, time: 1 }, { unique: true });
 
 export const TimeSlot = models.TimeSlot || model('TimeSlot', TimeSlotSchema);
 
+const BookingSchema = new Schema({
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  venue: { type: Schema.Types.ObjectId, ref: 'Venue', required: true },
+  court: { type: Schema.Types.ObjectId, ref: 'Court', required: true },
+  date: { type: String, required: true }, // YYYY-MM-DD
+  time: { type: String, required: true }, // HH:mm
+  duration: { type: Number, default: 1 },
+  totalAmount: { type: Number, required: true },
+  status: { type: String, enum: ['confirmed', 'cancelled'], default: 'confirmed' },
+}, { timestamps: true });
+
+export const Booking = models.Booking || model('Booking', BookingSchema);
+

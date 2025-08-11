@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,6 +38,7 @@ interface BookingData {
 
 export default function BookingPage() {
   const params = useParams()
+  const search = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -69,8 +70,23 @@ export default function BookingPage() {
       venue: { id: venueId, name: "Selected Venue", location: "" },
       court: { id: courtId, name: "Selected Court", sport: "", pricePerHour: 0 },
     }))
+    // Preselect date/time from query if provided
+    const qDate = search.get('date')
+    const qTime = search.get('time')
+    if (qDate) {
+      const parsed = new Date(qDate)
+      if (!isNaN(parsed.getTime())) {
+        setBookingData((prev) => ({ ...prev, selectedDate: parsed }))
+      }
+    }
+    if (qTime) {
+      // selected time will be matched once slots are loaded
+      setTimeout(() => {
+        setAvailableSlots((prev) => prev)
+      }, 0)
+    }
     setIsLoading(false)
-  }, [params, user, router])
+  }, [params, user, router, search])
 
   useEffect(() => {
     const loadSlots = async () => {
@@ -81,9 +97,14 @@ export default function BookingPage() {
       const data = await res.json()
       const slots = (data || []).map((s: any) => ({ time: s.time, price: s.price, isAvailable: s.isAvailable }))
       setAvailableSlots(slots)
+      const qTime = search.get('time')
+      if (qTime) {
+        const match = slots.find((s) => s.time === qTime && s.isAvailable)
+        if (match) setBookingData((prev) => ({ ...prev, selectedTimeSlot: match }))
+      }
     }
     loadSlots()
-  }, [bookingData.selectedDate, bookingData.venue.id, bookingData.court.id])
+  }, [bookingData.selectedDate, bookingData.venue.id, bookingData.court.id, search])
 
   useEffect(() => {
     if (bookingData.selectedTimeSlot && bookingData.duration) {
@@ -124,7 +145,9 @@ export default function BookingPage() {
     setIsBooking(true)
 
     try {
+      const ownerOrUserId = (user as any)?.id || (user as any)?._id
       const bookingPayload = {
+        userId: ownerOrUserId,
         customerName: user?.name || "Guest User",
         customerEmail: user?.email || "guest@example.com",
         venueId: bookingData.venue.id,
