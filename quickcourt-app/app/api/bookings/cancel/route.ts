@@ -1,40 +1,34 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { emailService, type CancellationEmailData } from "@/lib/email"
+import { dbConnect, Booking, TimeSlot } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
+    await dbConnect()
     const { bookingId, reason } = await request.json()
 
-    // Mock booking cancellation logic
-    const booking = {
-      id: bookingId,
-      customerName: "John Smith",
-      customerEmail: "john@example.com",
-      venueName: "SportZone Arena",
-      venueLocation: "Downtown, City Center",
-      courtName: "Badminton Court 1",
-      sport: "Badminton",
-      date: "2024-01-20",
-      time: "18:00",
-      duration: 2,
-      totalAmount: 50,
-      status: "cancelled",
-      cancelledAt: new Date().toISOString(),
-      cancellationReason: reason,
-    }
+    const booking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status: 'cancelled' },
+      { new: true }
+    )
+    if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
-    // Calculate refund (mock logic)
-    const refundAmount = booking.totalAmount * 0.9 // 10% cancellation fee
+    // Free the slot again
+    await TimeSlot.findOneAndUpdate({ court: booking.court, date: booking.date, time: booking.time }, { isAvailable: true })
+
+    // Simple refund logic: 90% refund
+    const refundAmount = Number(booking.totalAmount || 0) * 0.9
 
     // Prepare email data
     const emailData: CancellationEmailData = {
-      customerName: booking.customerName,
-      customerEmail: booking.customerEmail,
-      bookingId: booking.id,
-      venueName: booking.venueName,
-      venueLocation: booking.venueLocation,
-      courtName: booking.courtName,
-      sport: booking.sport,
+      customerName: booking.customerName || 'Customer',
+      customerEmail: booking.customerEmail || 'unknown@example.com',
+      bookingId: String(booking._id),
+      venueName: booking.venueName || 'Venue',
+      venueLocation: booking.venueLocation || '',
+      courtName: booking.courtName || 'Court',
+      sport: booking.sport || '',
       bookingDate: new Date(booking.date).toLocaleDateString("en-US", {
         weekday: "long",
         year: "numeric",

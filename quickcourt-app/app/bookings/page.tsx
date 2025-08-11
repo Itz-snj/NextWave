@@ -11,29 +11,23 @@ import { useToast } from "@/hooks/use-toast"
 import { MapPin, Clock, Calendar, X } from "lucide-react"
 import Link from "next/link"
 
-interface Booking {
-  id: number
-  venue: {
-    name: string
-    location: string
-  }
-  court: {
-    name: string
-    sport: string
-  }
+interface BookingDTO {
+  _id: string
+  venue: { _id: string; name: string; location: string }
+  court: { _id: string; name: string; sport: string }
   date: string
   time: string
   duration: number
-  totalPrice: number
-  status: "confirmed" | "cancelled" | "completed"
-  bookingDate: string
+  totalAmount: number
+  status: "confirmed" | "cancelled"
+  createdAt: string
 }
 
 export default function MyBookingsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<BookingDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -42,83 +36,16 @@ export default function MyBookingsPage() {
       return
     }
 
-    // Mock bookings data
-    const mockBookings: Booking[] = [
-      {
-        id: 1,
-        venue: {
-          name: "SportZone Arena",
-          location: "Downtown, City Center",
-        },
-        court: {
-          name: "Badminton Court 1",
-          sport: "Badminton",
-        },
-        date: "2024-01-15",
-        time: "18:00",
-        duration: 2,
-        totalPrice: 50,
-        status: "confirmed",
-        bookingDate: "2024-01-10",
-      },
-      {
-        id: 2,
-        venue: {
-          name: "Elite Courts",
-          location: "Midtown Sports Complex",
-        },
-        court: {
-          name: "Basketball Court 1",
-          sport: "Basketball",
-        },
-        date: "2024-01-12",
-        time: "16:00",
-        duration: 1,
-        totalPrice: 30,
-        status: "completed",
-        bookingDate: "2024-01-08",
-      },
-      {
-        id: 3,
-        venue: {
-          name: "Tennis Academy",
-          location: "Northside, Hill View",
-        },
-        court: {
-          name: "Tennis Court 1",
-          sport: "Tennis",
-        },
-        date: "2024-01-20",
-        time: "10:00",
-        duration: 1,
-        totalPrice: 35,
-        status: "confirmed",
-        bookingDate: "2024-01-11",
-      },
-      {
-        id: 4,
-        venue: {
-          name: "Green Turf",
-          location: "Suburbs, Green Valley",
-        },
-        court: {
-          name: "Football Field 1",
-          sport: "Football",
-        },
-        date: "2024-01-08",
-        time: "14:00",
-        duration: 2,
-        totalPrice: 80,
-        status: "cancelled",
-        bookingDate: "2024-01-05",
-      },
-    ]
-
-    setBookings(mockBookings)
+    const load = async () => {
+      const res = await fetch(`/api/bookings?user=${(user as any)?.id || (user as any)?._id}`)
+      const data = await res.json()
+      setBookings(Array.isArray(data) ? data : [])
+    }
+    load()
     setIsLoading(false)
   }, [user, router])
 
-  const handleCancelBooking = async (bookingId: number) => {
+  const handleCancelBooking = async (bookingId: string) => {
     try {
       // Show confirmation dialog first
       const confirmed = window.confirm(
@@ -130,7 +57,7 @@ export default function MyBookingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bookingId: bookingId.toString(),
+          bookingId,
           reason: "User requested cancellation",
         }),
       })
@@ -138,9 +65,7 @@ export default function MyBookingsPage() {
       const result = await response.json()
 
       if (result.success) {
-        setBookings((prev) =>
-          prev.map((booking) => (booking.id === bookingId ? { ...booking, status: "cancelled" as const } : booking)),
-        )
+        setBookings((prev) => prev.map((b) => (b._id === bookingId ? { ...b, status: "cancelled" } : b)))
 
         toast({
           title: "Booking cancelled 📧",
@@ -168,8 +93,6 @@ export default function MyBookingsPage() {
         return "bg-green-100 text-green-800"
       case "cancelled":
         return "bg-red-100 text-red-800"
-      case "completed":
-        return "bg-blue-100 text-blue-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -180,16 +103,9 @@ export default function MyBookingsPage() {
     return bookingDateTime > new Date()
   }
 
-  const upcomingBookings = bookings.filter(
-    (booking) => booking.status === "confirmed" && isUpcoming(booking.date, booking.time),
-  )
+  const upcomingBookings = bookings.filter((b) => b.status === 'confirmed' && isUpcoming(b.date, b.time))
 
-  const pastBookings = bookings.filter(
-    (booking) =>
-      booking.status === "completed" ||
-      booking.status === "cancelled" ||
-      (booking.status === "confirmed" && !isUpcoming(booking.date, booking.time)),
-  )
+  const pastBookings = bookings.filter((b) => b.status === 'cancelled' || (b.status === 'confirmed' && !isUpcoming(b.date, b.time)))
 
   if (isLoading) {
     return (
@@ -250,7 +166,7 @@ export default function MyBookingsPage() {
             ) : (
               <div className="space-y-4">
                 {upcomingBookings.map((booking) => (
-                  <Card key={booking.id}>
+                  <Card key={booking._id}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
@@ -272,7 +188,7 @@ export default function MyBookingsPage() {
                         <div className="space-y-2">
                           <div className="flex items-center">
                             <span className="font-semibold mr-2">Court:</span>
-                            <span>{booking.court.name}</span>
+                             <span>{booking.court.name}</span>
                             <Badge variant="secondary" className="ml-2">
                               {booking.court.sport}
                             </Badge>
@@ -291,10 +207,10 @@ export default function MyBookingsPage() {
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-sm text-gray-600">Total Paid</div>
-                            <div className="text-2xl font-bold text-indigo-600">${booking.totalPrice}</div>
+                             <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount}</div>
                           </div>
                           <div className="space-x-2">
-                            <Button variant="destructive" size="sm" onClick={() => handleCancelBooking(booking.id)}>
+                            <Button variant="destructive" size="sm" onClick={() => handleCancelBooking(booking._id)}>
                               <X className="h-4 w-4 mr-1" />
                               Cancel
                             </Button>
@@ -320,7 +236,7 @@ export default function MyBookingsPage() {
             ) : (
               <div className="space-y-4">
                 {pastBookings.map((booking) => (
-                  <Card key={booking.id}>
+                  <Card key={booking._id}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
@@ -342,7 +258,7 @@ export default function MyBookingsPage() {
                         <div className="space-y-2">
                           <div className="flex items-center">
                             <span className="font-semibold mr-2">Court:</span>
-                            <span>{booking.court.name}</span>
+                             <span>{booking.court.name}</span>
                             <Badge variant="secondary" className="ml-2">
                               {booking.court.sport}
                             </Badge>
@@ -361,13 +277,9 @@ export default function MyBookingsPage() {
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-sm text-gray-600">Total Paid</div>
-                            <div className="text-2xl font-bold text-indigo-600">${booking.totalPrice}</div>
+                             <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount}</div>
                           </div>
-                          {booking.status === "completed" && (
-                            <Button variant="outline" size="sm">
-                              Leave Review
-                            </Button>
-                          )}
+                          {/* Add review flow later if needed */}
                         </div>
                       </div>
                     </CardContent>

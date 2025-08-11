@@ -28,6 +28,10 @@ export default function VenueDetailsPage() {
   const router = useRouter()
   const [venue, setVenue] = useState<VenueApi | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [courts, setCourts] = useState<any[]>([])
+  const [selectedCourt, setSelectedCourt] = useState<string>("")
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [slots, setSlots] = useState<any[]>([])
 
   useEffect(() => {
     const id = params.id as string
@@ -37,6 +41,27 @@ export default function VenueDetailsPage() {
       .then((data) => setVenue(data))
       .finally(() => setIsLoading(false))
   }, [params.id])
+
+  useEffect(() => {
+    if (!venue?._id) return
+    fetch(`/api/courts?venue=${venue._id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setCourts(Array.isArray(data) ? data : [])
+        if (Array.isArray(data) && data.length > 0) setSelectedCourt(String(data[0]._id))
+      })
+  }, [venue?._id])
+
+  useEffect(() => {
+    const load = async () => {
+      if (!selectedCourt || !selectedDate || !venue?._id) return setSlots([])
+      const date = selectedDate.toISOString().slice(0, 10)
+      const res = await fetch(`/api/timeslots?venue=${venue._id}&court=${selectedCourt}&date=${date}&cleanup=1`)
+      const data = await res.json()
+      setSlots(Array.isArray(data) ? data : [])
+    }
+    load()
+  }, [selectedCourt, selectedDate, venue?._id])
 
   const amenityIcons: { [key: string]: any } = {
     "Free Parking": Car,
@@ -205,10 +230,57 @@ export default function VenueDetailsPage() {
             <Card className="sticky top-8">
               <CardHeader>
                 <CardTitle>Book this Venue</CardTitle>
-                <CardDescription>Select a court to book your session</CardDescription>
+                <CardDescription>Select a court, date and time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 text-sm text-gray-600">Booking integration coming soon.</div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-sm font-medium mb-1">Court</div>
+                    <select
+                      value={selectedCourt}
+                      onChange={(e) => setSelectedCourt(e.target.value)}
+                      className="w-full border rounded px-2 py-2"
+                    >
+                      {courts.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name} {c.sport ? `(${c.sport})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {courts.length === 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">No courts found for this venue.</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium mb-1">Date</div>
+                    <input
+                      type="date"
+                      className="w-full border rounded px-2 py-2"
+                      onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : null)}
+                    />
+                  </div>
+
+                  {selectedDate && slots.length > 0 && (
+                    <div>
+                      <div className="text-sm font-medium mb-2">Available Time Slots</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {slots.map((s) => (
+                          <Button key={s._id} variant="outline" onClick={() => router.push(`/booking/${venue!._id}/${selectedCourt}?date=${selectedDate!.toISOString().slice(0,10)}&time=${s.time}`)}>
+                            <div className="text-left">
+                              <div className="font-semibold">{s.time}</div>
+                              <div className="text-xs">₹{s.price}</div>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedDate && slots.length === 0 && (
+                    <div className="text-xs text-muted-foreground">No slots for selected date.</div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
