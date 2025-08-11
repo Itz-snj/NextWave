@@ -93,3 +93,33 @@ const BookingSchema = new Schema({
 
 export const Booking = models.Booking || model('Booking', BookingSchema);
 
+const ReportSchema = new Schema({
+  type: { type: String, enum: ['venue', 'user', 'booking', 'content'], required: true },
+  reporter: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  reportedItem: {
+    _id: { type: Schema.Types.ObjectId, required: true },
+    name: { type: String, required: true },
+    type: { type: String, required: true }
+  },
+  reason: { type: String, required: true },
+  description: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'investigating', 'resolved', 'dismissed'], default: 'pending' },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+  moderatorNotes: { type: String },
+  action: { type: String },
+}, { timestamps: true });
+
+export const Report = models.Report || model('Report', ReportSchema);
+
+const AlertSchema = new Schema({
+  type: { type: String, enum: ['warning', 'info', 'success', 'error'], required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  category: { type: String, enum: ['system', 'security', 'performance', 'user'], default: 'system' },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+  isActive: { type: Boolean, default: true },
+  expiresAt: { type: Date },
+}, { timestamps: true });
+
+export const Alert = models.Alert || model('Alert', AlertSchema);
+
