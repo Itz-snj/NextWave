@@ -12,8 +12,13 @@
 
 ## 📽️ Presentation
 [User panel](https://youtu.be/84Mt7nBZGo4)
-[Owner panel](https://youtu.be/XG5REDqZgXE)
+
+---
 [Admin Panel](https://youtu.be/izdhIyJuv7E)
+
+---
+[Owner panel](https://youtu.be/XG5REDqZgXE)
+
 [AI assitant](https://youtu.be/PWUxQVraCv8)
 
 ---
