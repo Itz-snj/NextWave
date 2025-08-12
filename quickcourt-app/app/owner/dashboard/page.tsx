@@ -28,18 +28,22 @@ interface DashboardStats {
   activeCourts: number
   monthlyEarnings: number
   totalCustomers: number
+  earningsGrowth?: string
+  bookingGrowth?: string
+  newCustomersThisMonth?: number
 }
 
 interface Booking {
-  id: number
+  id: string
   customerName: string
   court: string
   sport: string
+  venue: string
   date: string
   time: string
   duration: number
   amount: number
-  status: "confirmed" | "completed" | "cancelled"
+  status: "confirmed" | "cancelled"
 }
 
 export default function OwnerDashboard() {
@@ -52,36 +56,12 @@ export default function OwnerDashboard() {
     totalCustomers: 0,
   })
   const [recentBookings, setRecentBookings] = useState<Booking[]>([])
+  const [bookingTrends, setBookingTrends] = useState<any[]>([])
+  const [sportDistribution, setSportDistribution] = useState<any[]>([])
+  const [peakHours, setPeakHours] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Mock chart data
-  const bookingTrends = [
-    { month: "Jan", bookings: 45, earnings: 1125 },
-    { month: "Feb", bookings: 52, earnings: 1300 },
-    { month: "Mar", bookings: 48, earnings: 1200 },
-    { month: "Apr", bookings: 61, earnings: 1525 },
-    { month: "May", bookings: 55, earnings: 1375 },
-    { month: "Jun", bookings: 67, earnings: 1675 },
-  ]
 
-  const sportDistribution = [
-    { name: "Badminton", value: 40, color: "#8884d8" },
-    { name: "Tennis", value: 30, color: "#82ca9d" },
-    { name: "Squash", value: 20, color: "#ffc658" },
-    { name: "Table Tennis", value: 10, color: "#ff7300" },
-  ]
-
-  const peakHours = [
-    { hour: "6:00", bookings: 2 },
-    { hour: "8:00", bookings: 5 },
-    { hour: "10:00", bookings: 8 },
-    { hour: "12:00", bookings: 12 },
-    { hour: "14:00", bookings: 15 },
-    { hour: "16:00", bookings: 18 },
-    { hour: "18:00", bookings: 25 },
-    { hour: "20:00", bookings: 22 },
-    { hour: "22:00", bookings: 8 },
-  ]
 
   useEffect(() => {
     if (!user || user.role !== "owner") {
@@ -89,64 +69,42 @@ export default function OwnerDashboard() {
       return
     }
 
-    // Mock data
-    const mockStats: DashboardStats = {
-      totalBookings: 156,
-      activeCourts: 8,
-      monthlyEarnings: 3850,
-      totalCustomers: 89,
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch stats
+        const statsResponse = await fetch(`/api/owner/dashboard/stats?ownerId=${user.id}`)
+        const statsData = await statsResponse.json()
+        
+        if (statsResponse.ok) {
+          setStats({
+            totalBookings: statsData.totalBookings,
+            activeCourts: statsData.activeCourts,
+            monthlyEarnings: statsData.monthlyEarnings,
+            totalCustomers: statsData.totalCustomers,
+            earningsGrowth: statsData.earningsGrowth,
+            bookingGrowth: statsData.bookingGrowth,
+            newCustomersThisMonth: statsData.newCustomersThisMonth,
+          })
+        }
+
+        // Fetch chart data and recent bookings
+        const chartsResponse = await fetch(`/api/owner/dashboard/charts?ownerId=${user.id}`)
+        const chartsData = await chartsResponse.json()
+        
+        if (chartsResponse.ok) {
+          setRecentBookings(chartsData.recentBookings || [])
+          setBookingTrends(chartsData.bookingTrends || [])
+          setSportDistribution(chartsData.sportDistribution || [])
+          setPeakHours(chartsData.peakHours || [])
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    const mockBookings: Booking[] = [
-      {
-        id: 1,
-        customerName: "John Smith",
-        court: "Badminton Court 1",
-        sport: "Badminton",
-        date: "2024-01-15",
-        time: "18:00",
-        duration: 2,
-        amount: 50,
-        status: "confirmed",
-      },
-      {
-        id: 2,
-        customerName: "Sarah Johnson",
-        court: "Tennis Court 1",
-        sport: "Tennis",
-        date: "2024-01-15",
-        time: "16:00",
-        duration: 1,
-        amount: 40,
-        status: "confirmed",
-      },
-      {
-        id: 3,
-        customerName: "Mike Davis",
-        court: "Squash Court 1",
-        sport: "Squash",
-        date: "2024-01-14",
-        time: "19:00",
-        duration: 1,
-        amount: 30,
-        status: "completed",
-      },
-      {
-        id: 4,
-        customerName: "Emily Brown",
-        court: "Badminton Court 2",
-        sport: "Badminton",
-        date: "2024-01-14",
-        time: "20:00",
-        duration: 1,
-        amount: 25,
-        status: "completed",
-      },
-    ]
-
-    setStats(mockStats)
-    setRecentBookings(mockBookings)
-    setIsLoading(false)
+    fetchDashboardData()
   }, [user, router])
 
   if (isLoading) {
@@ -234,7 +192,9 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalBookings}</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <p className="text-xs text-muted-foreground">
+                {stats.bookingGrowth ? `${stats.bookingGrowth} from last month` : 'No previous data'}
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -254,7 +214,9 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${stats.monthlyEarnings}</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <p className="text-xs text-muted-foreground">
+                {stats.earningsGrowth ? `${stats.earningsGrowth} from last month` : 'No previous data'}
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -264,7 +226,9 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">+15 new this month</p>
+              <p className="text-xs text-muted-foreground">
+                {stats.newCustomersThisMonth ? `+${stats.newCustomersThisMonth} new this month` : 'No new customers'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -279,14 +243,20 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={bookingTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="bookings" stroke="#8884d8" strokeWidth={2} />
-                  <Line type="monotone" dataKey="earnings" stroke="#82ca9d" strokeWidth={2} />
-                </LineChart>
+                {bookingTrends.length > 0 ? (
+                  <LineChart data={bookingTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="bookings" stroke="#8884d8" strokeWidth={2} />
+                    <Line type="monotone" dataKey="earnings" stroke="#82ca9d" strokeWidth={2} />
+                  </LineChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">No booking data available</p>
+                  </div>
+                )}
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -299,23 +269,29 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={sportDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {sportDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
+                {sportDistribution.length > 0 ? (
+                  <PieChart>
+                    <Pie
+                      data={sportDistribution}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {sportDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">No sport distribution data available</p>
+                  </div>
+                )}
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -328,13 +304,19 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={peakHours}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="bookings" fill="#8884d8" />
-                </BarChart>
+                {peakHours.length > 0 ? (
+                  <BarChart data={peakHours}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="bookings" fill="#8884d8" />
+                  </BarChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500">No peak hours data available</p>
+                  </div>
+                )}
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -348,32 +330,38 @@ export default function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <h4 className="font-semibold">{booking.customerName}</h4>
-                      <p className="text-sm text-gray-600">
-                        {booking.court} • {booking.sport}
-                      </p>
+              {recentBookings.length > 0 ? (
+                recentBookings.map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div>
+                        <h4 className="font-semibold">{booking.customerName}</h4>
+                        <p className="text-sm text-gray-600">
+                          {booking.venue} • {booking.court} • {booking.sport}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="font-semibold">{new Date(booking.date).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-600">
+                          {booking.time} ({booking.duration}h)
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-indigo-600">${booking.amount}</p>
+                        <Badge variant={booking.status === "confirmed" ? "default" : "secondary"} className="text-xs">
+                          {booking.status}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="font-semibold">{new Date(booking.date).toLocaleDateString()}</p>
-                      <p className="text-sm text-gray-600">
-                        {booking.time} ({booking.duration}h)
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-indigo-600">${booking.amount}</p>
-                      <Badge variant={booking.status === "confirmed" ? "default" : "secondary"} className="text-xs">
-                        {booking.status}
-                      </Badge>
-                    </div>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No recent bookings found</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-6 text-center">
               <Link href="/owner/bookings">
