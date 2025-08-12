@@ -17,5 +17,5 @@
 ---
 [Owner panel](https://youtu.be/XG5REDqZgXE)
 ---
-[AI assitant](https://youtu.be/PWUxQVraCv8)
+[AI assitant](https://youtu.be/k6OTFmyNhT4)
 ---
