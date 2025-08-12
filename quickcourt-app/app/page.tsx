@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Clock, Star, Users } from "lucide-react"
 import Link from "next/link"
-import { EmailTestPanel } from "@/components/email-test-panel"
 
 interface VenueApi {
   _id: string
@@ -274,15 +273,106 @@ export default function HomePage() {
             </div>
           )}
         </section>
-        {process.env.NODE_ENV === "development" && (
-          <section className="mt-16">
-            <h3 className="text-2xl font-bold mb-6">Email System Testing</h3>
-            <div className="flex justify-center">
-              <EmailTestPanel />
-            </div>
-          </section>
-        )}
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Company Info */}
+            <div className="col-span-2">
+              <h3 className="text-2xl font-bold text-indigo-400 mb-4">QuickCourt</h3>
+              <p className="text-gray-300 mb-4 max-w-md">
+                Your premier platform for booking sports facilities and connecting with fellow sports enthusiasts. 
+                Find, book, and play at the best venues in your area.
+              </p>
+              <div className="flex space-x-4">
+                <div className="bg-indigo-600 p-2 rounded-full">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="bg-indigo-600 p-2 rounded-full">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="bg-indigo-600 p-2 rounded-full">
+                  <Users className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/venues" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Browse Venues
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/bookings" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    My Bookings
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/profile" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Profile
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/auth/login" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Login
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Support</h4>
+              <ul className="space-y-2">
+                <li>
+                  <a href="#" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Contact Us
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-gray-300 hover:text-indigo-400 transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © 2024 QuickCourt. All rights reserved.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <a href="#" className="text-gray-400 hover:text-indigo-400 transition-colors text-sm">
+                Privacy
+              </a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400 transition-colors text-sm">
+                Terms
+              </a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400 transition-colors text-sm">
+                Cookies
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

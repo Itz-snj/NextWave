@@ -69,7 +69,7 @@ export default function MyBookingsPage() {
 
         toast({
           title: "Booking cancelled 📧",
-          description: `Your booking has been cancelled successfully. ${result.emailSent ? "Cancellation email sent!" : ""} Refund: $${result.refundAmount}`,
+                      description: `Your booking has been cancelled successfully. ${result.emailSent ? "Cancellation email sent!" : ""} Refund: ₹${result.refundAmount}`,
         })
       } else {
         toast({

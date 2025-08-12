@@ -245,7 +245,7 @@ export default function Reports() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${reportData.revenue.total.toLocaleString()}</div>
+              <div className="text-2xl font-bold">₹{reportData.revenue.total.toLocaleString()}</div>
               <div className="flex items-center space-x-1">
                 {getGrowthIcon(reportData.revenue.growth)}
                 <p className={`text-xs ${getGrowthColor(reportData.revenue.growth)}`}>
@@ -320,7 +320,7 @@ export default function Reports() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Revenue"]} />
+                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, "Revenue"]} />
                     <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
                   </RechartsLineChart>
                 </ResponsiveContainer>
@@ -374,7 +374,7 @@ export default function Reports() {
                         </TableCell>
                         <TableCell>{venue.location}</TableCell>
                         <TableCell>{venue.totalBookings}</TableCell>
-                        <TableCell>${venue.totalRevenue.toLocaleString()}</TableCell>
+                        <TableCell>₹{venue.totalRevenue.toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{venue.averageRating.toFixed(1)} ⭐</Badge>
                         </TableCell>
@@ -400,7 +400,7 @@ export default function Reports() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="venue" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Revenue"]} />
+                      <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, "Revenue"]} />
                       <Bar dataKey="revenue" fill="#82ca9d" />
                     </RechartsBarChart>
                   </ResponsiveContainer>
@@ -418,7 +418,7 @@ export default function Reports() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Revenue"]} />
+                      <Tooltip formatter={(value) => [`$₹{value.toLocaleString()}`, "Revenue"]} />
                       <Bar dataKey="revenue" fill="#8884d8" />
                     </RechartsBarChart>
                   </ResponsiveContainer>
@@ -473,7 +473,7 @@ export default function Reports() {
                           <p className="text-xs text-gray-500">{booking.date} at {booking.time}</p>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold">${booking.amount}</div>
+                          <div className="font-semibold">₹{booking.amount}</div>
                           <Badge variant={booking.status === 'confirmed' ? 'default' : 'outline'}>
                             {booking.status}
                           </Badge>

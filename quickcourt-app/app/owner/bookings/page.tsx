@@ -129,7 +129,7 @@ export default function OwnerBookingsPage() {
                   <TableCell>{b.date}</TableCell>
                   <TableCell>{b.time}</TableCell>
                   <TableCell>{b.duration}h</TableCell>
-                  <TableCell>${Number(b.totalAmount || 0).toFixed(2)}</TableCell>
+                                      <TableCell>₹{Number(b.totalAmount || 0).toFixed(2)}</TableCell>
                   <TableCell>
                     {b.status === "confirmed" ? <Badge>Confirmed</Badge> : <Badge variant="secondary">Cancelled</Badge>}
                   </TableCell>
