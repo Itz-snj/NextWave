@@ -18,18 +18,23 @@ interface TimeSlot {
   price: number
 }
 
+interface Venue {
+  _id: string
+  name: string
+  location: string
+  description?: string
+}
+
+interface Court {
+  _id: string
+  name: string
+  sport: string
+  basePricePerHour: number
+}
+
 interface BookingData {
-  venue: {
-    id: string
-    name: string
-    location: string
-  }
-  court: {
-    id: string
-    name: string
-    sport: string
-    pricePerHour: number
-  }
+  venue: Venue | null
+  court: Court | null
   selectedDate: Date | null
   selectedTimeSlot: TimeSlot | null
   duration: number
@@ -44,8 +49,8 @@ export default function BookingPage() {
   const { toast } = useToast()
 
   const [bookingData, setBookingData] = useState<BookingData>({
-    venue: { id: "", name: "", location: "" },
-    court: { id: "", name: "", sport: "", pricePerHour: 0 },
+    venue: null,
+    court: null,
     selectedDate: null,
     selectedTimeSlot: null,
     duration: 1,
@@ -62,49 +67,114 @@ export default function BookingPage() {
       return
     }
 
-    // Load venue/court basic data placeholders (could be extended to fetch details)
-    const venueId = String(params.venueId)
-    const courtId = String(params.courtId)
-    setBookingData((prev) => ({
-      ...prev,
-      venue: { id: venueId, name: "Selected Venue", location: "" },
-      court: { id: courtId, name: "Selected Court", sport: "", pricePerHour: 0 },
-    }))
-    // Preselect date/time from query if provided
-    const qDate = search.get('date')
-    const qTime = search.get('time')
-    if (qDate) {
-      const parsed = new Date(qDate)
-      if (!isNaN(parsed.getTime())) {
-        setBookingData((prev) => ({ ...prev, selectedDate: parsed }))
+    const loadVenueAndCourtData = async () => {
+      try {
+        const venueId = String(params.venueId)
+        const courtId = String(params.courtId)
+        
+        console.log("🔍 Loading venue and court data...")
+        console.log("🔍 Venue ID:", venueId)
+        console.log("🔍 Court ID:", courtId)
+
+        // Fetch venue details
+        console.log("📡 Fetching venue details...")
+        const venueResponse = await fetch(`/api/venues/${venueId}`)
+        console.log("📡 Venue response status:", venueResponse.status)
+        
+        if (!venueResponse.ok) {
+          const errorText = await venueResponse.text()
+          console.error("❌ Venue fetch failed:", errorText)
+          throw new Error(`Venue not found: ${venueResponse.status} ${errorText}`)
+        }
+        const venueData = await venueResponse.json()
+        console.log("✅ Venue data loaded:", venueData)
+
+        // Fetch court details
+        console.log("📡 Fetching court details...")
+        const courtResponse = await fetch(`/api/courts/${courtId}`)
+        console.log("📡 Court response status:", courtResponse.status)
+        
+        if (!courtResponse.ok) {
+          const errorText = await courtResponse.text()
+          console.error("❌ Court fetch failed:", errorText)
+          throw new Error(`Court not found: ${courtResponse.status} ${errorText}`)
+        }
+        const courtData = await courtResponse.json()
+        console.log("✅ Court data loaded:", courtData)
+
+        setBookingData((prev) => ({
+          ...prev,
+          venue: venueData,
+          court: courtData,
+        }))
+
+        // Preselect date/time from query if provided
+        const qDate = search.get('date')
+        const qTime = search.get('time')
+        if (qDate) {
+          const parsed = new Date(qDate)
+          if (!isNaN(parsed.getTime())) {
+            setBookingData((prev) => ({ ...prev, selectedDate: parsed }))
+          }
+        }
+        if (qTime) {
+          // selected time will be matched once slots are loaded
+          setTimeout(() => {
+            setAvailableSlots((prev) => prev)
+          }, 0)
+        }
+      } catch (error) {
+        console.error('❌ Error loading venue/court data:', error)
+        toast({ 
+          title: "Error", 
+          description: `Failed to load venue or court details: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+          variant: "destructive" 
+        })
+        router.push('/venues')
+      } finally {
+        setIsLoading(false)
       }
     }
-    if (qTime) {
-      // selected time will be matched once slots are loaded
-      setTimeout(() => {
-        setAvailableSlots((prev) => prev)
-      }, 0)
-    }
-    setIsLoading(false)
-  }, [params, user, router, search])
+
+    loadVenueAndCourtData()
+  }, [params, user, router, search, toast])
 
   useEffect(() => {
     const loadSlots = async () => {
-      if (!bookingData.selectedDate) return setAvailableSlots([])
-      const date = bookingData.selectedDate.toISOString().slice(0, 10)
-      // Hide past slots and clean up passed ones
-      const res = await fetch(`/api/timeslots?venue=${bookingData.venue.id}&court=${bookingData.court.id}&date=${date}&cleanup=1`)
-      const data = await res.json()
-      const slots = (data || []).map((s: any) => ({ time: s.time, price: s.price, isAvailable: s.isAvailable }))
-      setAvailableSlots(slots)
-      const qTime = search.get('time')
-      if (qTime) {
-        const match = slots.find((s) => s.time === qTime && s.isAvailable)
-        if (match) setBookingData((prev) => ({ ...prev, selectedTimeSlot: match }))
+      if (!bookingData.selectedDate || !bookingData.venue || !bookingData.court) return setAvailableSlots([])
+      
+      try {
+        const date = bookingData.selectedDate.toISOString().slice(0, 10)
+        // Hide past slots and clean up passed ones
+        const res = await fetch(`/api/timeslots?venue=${bookingData.venue._id}&court=${bookingData.court._id}&date=${date}&cleanup=1`)
+        if (!res.ok) {
+          throw new Error('Failed to load time slots')
+        }
+        const data = await res.json()
+        const slots = (data || []).map((s: any) => ({ 
+          _id: s._id,
+          time: s.time, 
+          price: s.price, 
+          isAvailable: s.isAvailable 
+        }))
+        setAvailableSlots(slots)
+        
+        const qTime = search.get('time')
+        if (qTime) {
+          const match = slots.find((s) => s.time === qTime && s.isAvailable)
+          if (match) setBookingData((prev) => ({ ...prev, selectedTimeSlot: match }))
+        }
+      } catch (error) {
+        console.error('Error loading time slots:', error)
+        toast({ 
+          title: "Error", 
+          description: "Failed to load available time slots.", 
+          variant: "destructive" 
+        })
       }
     }
     loadSlots()
-  }, [bookingData.selectedDate, bookingData.venue.id, bookingData.court.id, search])
+  }, [bookingData.selectedDate, bookingData.venue, bookingData.court, search, toast])
 
   useEffect(() => {
     if (bookingData.selectedTimeSlot && bookingData.duration) {
@@ -137,7 +207,7 @@ export default function BookingPage() {
   }
 
   const handleBooking = async () => {
-    if (!bookingData.selectedDate || !bookingData.selectedTimeSlot) {
+    if (!bookingData.selectedDate || !bookingData.selectedTimeSlot || !bookingData.venue || !bookingData.court) {
       toast({ title: "Incomplete booking", description: "Please select a date and time slot", variant: "destructive" })
       return
     }
@@ -145,15 +215,28 @@ export default function BookingPage() {
     setIsBooking(true)
 
     try {
-      const ownerOrUserId = (user as any)?.id || (user as any)?._id
+      const ownerOrUserId = user?.id
+      console.log("🔍 User ID for booking:", ownerOrUserId)
+      console.log("🔍 User object:", user)
+      
+      if (!ownerOrUserId) {
+        toast({ 
+          title: "Authentication Error", 
+          description: "Please log in to make a booking.", 
+          variant: "destructive" 
+        })
+        router.push("/auth/login")
+        return
+      }
+      
       const bookingPayload = {
         userId: ownerOrUserId,
         customerName: user?.name || "Guest User",
         customerEmail: user?.email || "guest@example.com",
-        venueId: bookingData.venue.id,
+        venueId: bookingData.venue._id,
         venueName: bookingData.venue.name,
         venueLocation: bookingData.venue.location,
-        courtId: bookingData.court.id,
+        courtId: bookingData.court._id,
         courtName: bookingData.court.name,
         sport: bookingData.court.sport,
         date: bookingData.selectedDate.toISOString().split("T")[0],
@@ -162,22 +245,70 @@ export default function BookingPage() {
         totalAmount: bookingData.totalPrice,
       }
 
+      console.log("📦 Sending booking payload:", JSON.stringify(bookingPayload, null, 2))
+
       const response = await fetch("/api/bookings/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bookingPayload),
       })
 
+      console.log("📡 Response status:", response.status)
+      console.log("📡 Response headers:", Object.fromEntries(response.headers.entries()))
+
       const result = await response.json()
+      console.log("📦 Response data:", JSON.stringify(result, null, 2))
 
       if (result.success) {
-        toast({ title: "Booking confirmed!", description: "Confirmation email sent!" })
-        router.push("/bookings")
+        toast({ 
+          title: "🎉 Booking Successful!", 
+          description: `Your booking has been confirmed! Booking ID: ${result.bookingId}. Confirmation email sent to ${user?.email}`, 
+          variant: "default" 
+        })
+        
+        // Add a small delay before redirecting to show the success message
+        setTimeout(() => {
+          router.push("/bookings")
+        }, 2000)
       } else {
-        toast({ title: "Booking failed", description: result.message || "Please try again.", variant: "destructive" })
+        console.error("❌ Booking failed with error:", result.error || result.message)
+        
+        // Handle specific error cases
+        if (result.error?.includes("no longer available")) {
+          toast({ 
+            title: "Slot Unavailable", 
+            description: "This time slot has been booked by someone else. Please select another time.", 
+            variant: "destructive" 
+          })
+          // Refresh available slots
+          const date = bookingData.selectedDate.toISOString().slice(0, 10)
+          const res = await fetch(`/api/timeslots?venue=${bookingData.venue._id}&court=${bookingData.court._id}&date=${date}&cleanup=1`)
+          if (res.ok) {
+            const data = await res.json()
+            const slots = (data || []).map((s: any) => ({ 
+              _id: s._id,
+              time: s.time, 
+              price: s.price, 
+              isAvailable: s.isAvailable 
+            }))
+            setAvailableSlots(slots)
+            setBookingData((prev) => ({ ...prev, selectedTimeSlot: null }))
+          }
+        } else {
+          toast({ 
+            title: "Booking failed", 
+            description: result.message || result.error || "Please try again.", 
+            variant: "destructive" 
+          })
+        }
       }
-    } catch (_e) {
-      toast({ title: "Booking failed", description: "Something went wrong.", variant: "destructive" })
+    } catch (error) {
+      console.error('❌ Booking error:', error)
+      toast({ 
+        title: "Booking failed", 
+        description: "Network error. Please check your connection and try again.", 
+        variant: "destructive" 
+      })
     } finally {
       setIsBooking(false)
     }
@@ -189,6 +320,20 @@ export default function BookingPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading booking details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!bookingData.venue || !bookingData.court) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Venue or Court Not Found</h2>
+          <p className="text-gray-600 mb-4">The venue or court you're looking for doesn't exist.</p>
+          <Button onClick={() => router.push('/venues')}>
+            Browse Venues
+          </Button>
         </div>
       </div>
     )
@@ -235,6 +380,9 @@ export default function BookingPage() {
                       <MapPin className="h-4 w-4 mr-1" />
                       {bookingData.venue.location}
                     </div>
+                    {bookingData.venue.description && (
+                      <p className="text-gray-600 mt-2">{bookingData.venue.description}</p>
+                    )}
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
@@ -242,7 +390,7 @@ export default function BookingPage() {
                       <Badge variant="secondary">{bookingData.court.sport}</Badge>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-indigo-600">₹{bookingData.selectedTimeSlot?.price || bookingData.court.pricePerHour}/hour</div>
+                      <div className="text-lg font-bold text-indigo-600">₹{bookingData.selectedTimeSlot?.price || bookingData.court.basePricePerHour}/hour</div>
                     </div>
                   </div>
                 </div>

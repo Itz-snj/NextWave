@@ -89,6 +89,16 @@ const BookingSchema = new Schema({
   duration: { type: Number, default: 1 },
   totalAmount: { type: Number, required: true },
   status: { type: String, enum: ['confirmed', 'cancelled'], default: 'confirmed' },
+  // Additional fields for better tracking
+  customerName: { type: String },
+  customerEmail: { type: String },
+  venueName: { type: String },
+  venueLocation: { type: String },
+  courtName: { type: String },
+  sport: { type: String },
+  paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'completed' },
+  paymentMethod: { type: String, default: 'online' },
+  notes: { type: String },
 }, { timestamps: true });
 
 export const Booking = models.Booking || model('Booking', BookingSchema);
