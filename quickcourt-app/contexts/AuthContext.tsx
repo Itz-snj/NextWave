@@ -9,6 +9,14 @@ interface User {
   email: string
   role: "user" | "owner" | "admin"
   avatar?: string
+  phone?: string
+  location?: string
+  bio?: string
+  preferences?: {
+    emailNotifications: boolean
+    smsNotifications: boolean
+    privacyLevel: 'public' | 'friends' | 'private'
+  }
   isVerified: boolean
 }
 
@@ -18,6 +26,7 @@ interface AuthContextType {
   signup: (userData: any) => Promise<boolean>
   logout: () => void
   verifyOTP: (otp: string) => Promise<boolean>
+  updateUser: (userData: User) => void
   isLoading: boolean
 }
 
@@ -93,6 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateUser = (userData: User) => {
+    setUser(userData)
+    localStorage.setItem("quickcourt_user", JSON.stringify(userData))
+  }
+
   const logout = () => {
     setUser(null)
     localStorage.removeItem("quickcourt_user")
@@ -107,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         logout,
         verifyOTP,
+        updateUser,
         isLoading,
       }}
     >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,22 +8,34 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { User, Phone, MapPin, Camera, ArrowLeft } from "lucide-react"
+import { User, Phone, MapPin, Camera, ArrowLeft, Upload, X, Edit3, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
     phone: "",
     location: "",
     avatar: "",
+    bio: "",
+    preferences: {
+      emailNotifications: true,
+      smsNotifications: false,
+      privacyLevel: 'public'
+    }
   })
 
   useEffect(() => {
@@ -35,31 +47,110 @@ export default function ProfilePage() {
     setProfileData({
       name: user.name || "",
       email: user.email || "",
-      phone: "+1 (555) 123-4567", // Mock data
-      location: "New York, NY", // Mock data
-      avatar: user.avatar || "/placeholder.svg?height=100&width=100",
+      phone: user.phone || "",
+      location: user.location || "",
+      avatar: user.avatar || "/placeholder-user.jpg",
+      bio: user.bio || "",
+      preferences: {
+        emailNotifications: user.preferences?.emailNotifications ?? true,
+        smsNotifications: user.preferences?.smsNotifications ?? false,
+        privacyLevel: user.preferences?.privacyLevel ?? 'public'
+      }
     })
   }, [user, router])
 
   const handleSave = async () => {
+    if (!user?.id) return
+
     setIsLoading(true)
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
+      const response = await fetch('/api/profile/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          profileData
+        }),
       })
-      setIsEditing(false)
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Update local user context
+        if (updateUser) {
+          updateUser(data.user)
+        }
+        
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been updated successfully.",
+        })
+        setIsEditing(false)
+      } else {
+        toast({
+          title: "Update failed",
+          description: data.error || "Failed to update profile. Please try again.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user?.id) return
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('userId', user.id)
+      formData.append('avatar', file)
+
+      const response = await fetch('/api/profile/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setProfileData(prev => ({ ...prev, avatar: data.avatar }))
+        if (updateUser) {
+          updateUser({ ...user, avatar: data.avatar })
+        }
+        toast({
+          title: "Avatar updated",
+          description: "Your profile photo has been updated successfully.",
+        })
+      } else {
+        toast({
+          title: "Upload failed",
+          description: data.error || "Failed to upload avatar. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -109,25 +200,43 @@ export default function ProfilePage() {
               <CardHeader className="text-center">
                 <div className="relative mx-auto w-24 h-24 mb-4">
                   <img
-                    src={profileData.avatar || "/placeholder.svg"}
+                    src={profileData.avatar || "/placeholder-user.jpg"}
                     alt="Profile"
                     className="w-full h-full rounded-full object-cover border-4 border-white shadow-lg"
                   />
-                  <button className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors">
-                    <Camera className="h-4 w-4" />
+                  <button 
+                    className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
                   </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
                 </div>
                 <CardTitle>{profileData.name}</CardTitle>
                 <CardDescription>{profileData.email}</CardDescription>
+                {profileData.bio && (
+                  <p className="text-sm text-gray-600 mt-2">{profileData.bio}</p>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{profileData.phone}</span>
+                  <span className="text-sm">{profileData.phone || "Not provided"}</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{profileData.location}</span>
+                  <span className="text-sm">{profileData.location || "Not provided"}</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <User className="h-4 w-4 text-gray-500" />
@@ -205,14 +314,27 @@ export default function ProfilePage() {
                     <CardDescription>Update your personal details</CardDescription>
                   </div>
                   {!isEditing ? (
-                    <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    <Button onClick={() => setIsEditing(true)}>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
                   ) : (
                     <div className="space-x-2">
                       <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isLoading}>
                         Cancel
                       </Button>
                       <Button onClick={handleSave} disabled={isLoading}>
-                        {isLoading ? "Saving..." : "Save Changes"}
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save Changes
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -248,6 +370,7 @@ export default function ProfilePage() {
                       value={profileData.phone}
                       onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                       disabled={!isEditing}
+                      placeholder="+1 (555) 123-4567"
                     />
                   </div>
                   <div>
@@ -257,8 +380,87 @@ export default function ProfilePage() {
                       value={profileData.location}
                       onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                       disabled={!isEditing}
+                      placeholder="City, State/Country"
                     />
                   </div>
+                </div>
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                    disabled={!isEditing}
+                    placeholder="Tell us about yourself..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preferences */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Preferences</CardTitle>
+                <CardDescription>Manage your account preferences</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-semibold">Email Notifications</h4>
+                    <p className="text-sm text-gray-600">Receive booking confirmations and updates</p>
+                  </div>
+                  <Switch
+                    checked={profileData.preferences.emailNotifications}
+                    onCheckedChange={(checked) => 
+                      setProfileData(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, emailNotifications: checked }
+                      }))
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-semibold">SMS Notifications</h4>
+                    <p className="text-sm text-gray-600">Receive text message updates</p>
+                  </div>
+                  <Switch
+                    checked={profileData.preferences.smsNotifications}
+                    onCheckedChange={(checked) => 
+                      setProfileData(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, smsNotifications: checked }
+                      }))
+                    }
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-semibold">Privacy Level</h4>
+                    <p className="text-sm text-gray-600">Control your profile visibility</p>
+                  </div>
+                  <Select
+                    value={profileData.preferences.privacyLevel}
+                    onValueChange={(value) => 
+                      setProfileData(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, privacyLevel: value as 'public' | 'friends' | 'private' }
+                      }))
+                    }
+                    disabled={!isEditing}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">Public</SelectItem>
+                      <SelectItem value="friends">Friends</SelectItem>
+                      <SelectItem value="private">Private</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -270,24 +472,6 @@ export default function ProfilePage() {
                 <CardDescription>Manage your account preferences</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Email Notifications</h4>
-                    <p className="text-sm text-gray-600">Receive booking confirmations and updates</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Privacy Settings</h4>
-                    <p className="text-sm text-gray-600">Control your profile visibility</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Manage
-                  </Button>
-                </div>
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-semibold">Change Password</h4>
