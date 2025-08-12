@@ -32,6 +32,16 @@ const UserSchema = new Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['user', 'owner', 'admin'], default: 'user' },
   isVerified: { type: Boolean, default: false },
+  // Enhanced profile fields
+  phone: { type: String, default: '' },
+  location: { type: String, default: '' },
+  avatar: { type: String, default: '' },
+  bio: { type: String, default: '' },
+  preferences: {
+    emailNotifications: { type: Boolean, default: true },
+    smsNotifications: { type: Boolean, default: false },
+    privacyLevel: { type: String, enum: ['public', 'friends', 'private'], default: 'public' }
+  }
 }, { timestamps: true });
 
 export const User = models.User || model('User', UserSchema);
