@@ -151,9 +151,9 @@ export default function VenuesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="low">Under $30/hour</SelectItem>
-                <SelectItem value="medium">$30-50/hour</SelectItem>
-                <SelectItem value="high">Over $50/hour</SelectItem>
+                <SelectItem value="low">Under ₹30/hour</SelectItem>
+                <SelectItem value="medium">₹30-50/hour</SelectItem>
+                <SelectItem value="high">Over ₹50/hour</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -217,7 +217,7 @@ export default function VenuesPage() {
                     )}
                   </div>
                   <div className="text-lg font-semibold text-indigo-600">
-                    ${venue.priceRange?.min ?? 0}-${venue.priceRange?.max ?? 0}/hour
+                    ₹{venue.priceRange?.min ?? 0}-₹{venue.priceRange?.max ?? 0}/hour
                   </div>
                 </CardDescription>
               </CardHeader>

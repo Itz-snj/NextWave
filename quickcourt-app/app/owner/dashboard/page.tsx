@@ -213,7 +213,7 @@ export default function OwnerDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.monthlyEarnings}</div>
+                              <div className="text-2xl font-bold">₹{stats.monthlyEarnings}</div>
               <p className="text-xs text-muted-foreground">
                 {stats.earningsGrowth ? `${stats.earningsGrowth} from last month` : 'No previous data'}
               </p>
@@ -276,7 +276,7 @@ export default function OwnerDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -349,7 +349,7 @@ export default function OwnerDashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-indigo-600">${booking.amount}</p>
+                        <p className="font-bold text-indigo-600">₹{booking.amount}</p>
                         <Badge variant={booking.status === "confirmed" ? "default" : "secondary"} className="text-xs">
                           {booking.status}
                         </Badge>

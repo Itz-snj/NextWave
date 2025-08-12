@@ -207,7 +207,7 @@ export default function OwnerCourtsPage() {
               <TableRow key={c._id}>
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>{c.sport}</TableCell>
-                <TableCell>${Number(c.basePricePerHour || 0).toFixed(2)}</TableCell>
+                                    <TableCell>₹{Number(c.basePricePerHour || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   {c.isActive ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
                 </TableCell>

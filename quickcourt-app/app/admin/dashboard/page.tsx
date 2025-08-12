@@ -269,7 +269,7 @@ export default function AdminDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.monthlyRevenue.toLocaleString()}</div>
+                              <div className="text-2xl font-bold">₹{stats.monthlyRevenue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">+24% from last month</p>
             </CardContent>
           </Card>
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Revenue"]} />
+                  <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, "Revenue"]} />
                   <Bar dataKey="revenue" fill="#82ca9d" />
                 </BarChart>
               </ResponsiveContainer>
