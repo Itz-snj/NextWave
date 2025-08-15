@@ -16,6 +16,12 @@ export default function ChatWidget(): JSX.Element {
 
     window.ChatWidgetConfig = {
       projectId: "6899fda639a3f4065ff48809",
+      // Configure widget to appear on left side bottom
+      position: "bottom-left",
+      theme: {
+        primaryColor: "#4f46e5", // Match with your indigo theme
+        borderRadius: "8px",
+      }
     }
 
     const chatWidgetScript = document.createElement("script")
@@ -27,7 +33,17 @@ export default function ChatWidget(): JSX.Element {
     window.chatWidgetScriptLoaded = true
   }, [])
 
-  return <div id="cd-widget" />
+  return (
+    <div 
+      id="cd-widget" 
+      className="chat-widget-container"
+      style={{
+        // Ensure it stays in bottom-left position
+        position: 'relative',
+        zIndex: 1000
+      }}
+    />
+  )
 }
 
 
