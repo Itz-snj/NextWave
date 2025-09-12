@@ -109,7 +109,7 @@ export default function VenueDetailsPage() {
                 Back
               </Button>
               <Link href="/">
-                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
               </Link>
             </div>
             <div className="flex items-center space-x-4">

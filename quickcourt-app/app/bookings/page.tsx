@@ -24,13 +24,16 @@ interface BookingDTO {
 }
 
 export default function MyBookingsPage() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [bookings, setBookings] = useState<BookingDTO[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true)
 
   useEffect(() => {
+    // Don't redirect if still loading auth state
+    if (isLoading) return
+    
     if (!user) {
       router.push("/auth/login")
       return
@@ -42,8 +45,8 @@ export default function MyBookingsPage() {
       setBookings(Array.isArray(data) ? data : [])
     }
     load()
-    setIsLoading(false)
-  }, [user, router])
+    setIsLoadingBookings(false)
+  }, [user, isLoading, router])
 
   const handleCancelBooking = async (bookingId: string) => {
     try {
@@ -107,7 +110,7 @@ export default function MyBookingsPage() {
 
   const pastBookings = bookings.filter((b) => b.status === 'cancelled' || (b.status === 'confirmed' && !isUpcoming(b.date, b.time)))
 
-  if (isLoading) {
+  if (isLoading || isLoadingBookings) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -125,7 +128,7 @@ export default function MyBookingsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <Link href="/">
-              <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+              <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
             </Link>
             <div className="flex items-center space-x-4">
               <Link href="/venues">

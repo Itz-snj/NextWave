@@ -195,7 +195,7 @@ export default function Reports() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
               <Link href="/admin/dashboard">
-                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
               </Link>
               <Badge variant="destructive">Admin</Badge>
             </div>
@@ -443,7 +443,7 @@ export default function Reports() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ sport, percentage }) => `${sport} ${percentage}%`}
+                        label={({ name, value }) => `${name} ${value}`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="count"
@@ -516,12 +516,12 @@ export default function Reports() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <RechartsPieChart>
-                      <Pie
+                     <Pie
                         data={reportData.users.byRole}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ role, percentage }) => `${role} ${percentage}%`}
+                        label={({ name, value }) => `${name} ${value}`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="count"

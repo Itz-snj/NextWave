@@ -1,10 +1,10 @@
-// Test data setup script for QuickCourt booking system
+// Test data setup script for NextWave booking system
 // Run this script to create sample venues, courts, and timeslots for testing
 
 const { MongoClient } = require('mongodb');
 
 // MongoDB connection string - replace with your actual connection string
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/quickcourt';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/nextwave';
 
 async function setupTestData() {
   const client = new MongoClient(MONGO_URL);

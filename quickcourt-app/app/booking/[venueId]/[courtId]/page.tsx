@@ -36,7 +36,9 @@ interface BookingData {
   venue: Venue | null
   court: Court | null
   selectedDate: Date | null
-  selectedTimeSlot: TimeSlot | null
+  startTimeSlot: TimeSlot | null
+  endTimeSlot: TimeSlot | null
+  selectedSlots: TimeSlot[]
   duration: number
   totalPrice: number
 }
@@ -52,7 +54,9 @@ export default function BookingPage() {
     venue: null,
     court: null,
     selectedDate: null,
-    selectedTimeSlot: null,
+    startTimeSlot: null,
+    endTimeSlot: null,
+    selectedSlots: [],
     duration: 1,
     totalPrice: 0,
   })
@@ -60,6 +64,49 @@ export default function BookingPage() {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isBooking, setIsBooking] = useState(false)
+
+  // Helper function to convert time string to minutes for easier calculation
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  // Helper function to convert minutes back to time string
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+  }
+
+  // Helper function to get consecutive slots between start and end time
+  const getConsecutiveSlots = (startTime: string, endTime: string): TimeSlot[] => {
+    const startMinutes = timeToMinutes(startTime)
+    const endMinutes = timeToMinutes(endTime)
+    const consecutiveSlots: TimeSlot[] = []
+    
+    for (let time = startMinutes; time < endMinutes; time += 60) {
+      const timeStr = minutesToTime(time)
+      const slot = availableSlots.find(s => s.time === timeStr)
+      if (slot) {
+        consecutiveSlots.push(slot)
+      } else {
+        // If any slot is missing, return empty array to indicate booking not possible
+        return []
+      }
+    }
+    
+    return consecutiveSlots
+  }
+
+  // Helper function to check if all consecutive slots are available
+  const areConsecutiveSlotsAvailable = (slots: TimeSlot[]): boolean => {
+    return slots.length > 0 && slots.every(slot => slot.isAvailable)
+  }
+
+  // Helper function to calculate total price for selected slots
+  const calculateTotalPrice = (slots: TimeSlot[]): number => {
+    return slots.reduce((total, slot) => total + slot.price, 0)
+  }
 
   useEffect(() => {
     if (!user) {
@@ -161,8 +208,8 @@ export default function BookingPage() {
         
         const qTime = search.get('time')
         if (qTime) {
-          const match = slots.find((s) => s.time === qTime && s.isAvailable)
-          if (match) setBookingData((prev) => ({ ...prev, selectedTimeSlot: match }))
+          const match = slots.find((s: TimeSlot) => s.time === qTime && s.isAvailable)
+          if (match) setBookingData((prev) => ({ ...prev, startTimeSlot: match, selectedSlots: [match] }))
         }
       } catch (error) {
         console.error('Error loading time slots:', error)
@@ -177,38 +224,87 @@ export default function BookingPage() {
   }, [bookingData.selectedDate, bookingData.venue, bookingData.court, search, toast])
 
   useEffect(() => {
-    if (bookingData.selectedTimeSlot && bookingData.duration) {
-      const totalPrice = bookingData.selectedTimeSlot.price * bookingData.duration
+    if (bookingData.selectedSlots.length > 0) {
+      const totalPrice = calculateTotalPrice(bookingData.selectedSlots)
       setBookingData((prev) => ({ ...prev, totalPrice }))
     }
-  }, [bookingData.selectedTimeSlot, bookingData.duration])
+  }, [bookingData.selectedSlots])
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setBookingData((prev) => ({
         ...prev,
         selectedDate: date,
-        selectedTimeSlot: null,
+        startTimeSlot: null,
+        endTimeSlot: null,
+        selectedSlots: [],
       }))
     }
   }
 
-  const handleTimeSlotSelect = (slot: TimeSlot) => {
-    if (slot.isAvailable) {
+  const handleTimeSlotSelect = (slot: TimeSlot, isEndTime: boolean = false) => {
+    if (!slot.isAvailable) return
+
+    if (!isEndTime) {
+      // Selecting start time
       setBookingData((prev) => ({
         ...prev,
-        selectedTimeSlot: slot,
+        startTimeSlot: slot,
+        endTimeSlot: null,
+        selectedSlots: [slot],
+        duration: 1,
+      }))
+    } else {
+      // Selecting end time
+      if (!bookingData.startTimeSlot) return
+
+      const startTime = bookingData.startTimeSlot.time
+      const endTime = slot.time
+      
+      // Validate that end time is after start time
+      if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+        toast({
+          title: "Invalid Selection",
+          description: "End time must be after start time",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const consecutiveSlots = getConsecutiveSlots(startTime, endTime)
+      
+      if (consecutiveSlots.length === 0) {
+        toast({
+          title: "Booking Not Available",
+          description: "Some time slots in this range are missing or unavailable. The turf will remain closed during those hours.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      if (!areConsecutiveSlotsAvailable(consecutiveSlots)) {
+        toast({
+          title: "Slots Not Available",
+          description: "Some slots in your selected time range are already booked.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const duration = Math.floor((timeToMinutes(endTime) - timeToMinutes(startTime)) / 60)
+      
+      setBookingData((prev) => ({
+        ...prev,
+        endTimeSlot: slot,
+        selectedSlots: consecutiveSlots,
+        duration: duration,
       }))
     }
-  }
-
-  const handleDurationChange = (duration: number) => {
-    setBookingData((prev) => ({ ...prev, duration }))
   }
 
   const handleBooking = async () => {
-    if (!bookingData.selectedDate || !bookingData.selectedTimeSlot || !bookingData.venue || !bookingData.court) {
-      toast({ title: "Incomplete booking", description: "Please select a date and time slot", variant: "destructive" })
+    if (!bookingData.selectedDate || bookingData.selectedSlots.length === 0 || !bookingData.venue || !bookingData.court) {
+      toast({ title: "Incomplete booking", description: "Please select a date and time slots", variant: "destructive" })
       return
     }
 
@@ -228,6 +324,10 @@ export default function BookingPage() {
         router.push("/auth/login")
         return
       }
+
+      // Create booking payload for multiple slots
+      const startTime = bookingData.selectedSlots[0].time
+      const endTime = bookingData.endTimeSlot?.time || minutesToTime(timeToMinutes(startTime) + 60)
       
       const bookingPayload = {
         userId: ownerOrUserId,
@@ -240,7 +340,13 @@ export default function BookingPage() {
         courtName: bookingData.court.name,
         sport: bookingData.court.sport,
         date: bookingData.selectedDate.toISOString().split("T")[0],
-        time: bookingData.selectedTimeSlot.time,
+        startTime: startTime,
+        endTime: endTime,
+        selectedSlots: bookingData.selectedSlots.map(slot => ({
+          time: slot.time,
+          price: slot.price,
+          _id: slot._id
+        })),
         duration: bookingData.duration,
         totalAmount: bookingData.totalPrice,
       }
@@ -292,7 +398,7 @@ export default function BookingPage() {
               isAvailable: s.isAvailable 
             }))
             setAvailableSlots(slots)
-            setBookingData((prev) => ({ ...prev, selectedTimeSlot: null }))
+            setBookingData((prev) => ({ ...prev, startTimeSlot: null, endTimeSlot: null, selectedSlots: [] }))
           }
         } else {
           toast({ 
@@ -351,7 +457,7 @@ export default function BookingPage() {
                 Back
               </Button>
               <Link href="/">
-                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
               </Link>
             </div>
           </div>
@@ -390,7 +496,9 @@ export default function BookingPage() {
                       <Badge variant="secondary">{bookingData.court.sport}</Badge>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-indigo-600">₹{bookingData.selectedTimeSlot?.price || bookingData.court.basePricePerHour}/hour</div>
+                      <div className="text-lg font-bold text-indigo-600">
+                        ₹{bookingData.selectedSlots.length > 0 ? bookingData.selectedSlots[0].price : bookingData.court.basePricePerHour}/hour
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -418,68 +526,92 @@ export default function BookingPage() {
             {bookingData.selectedDate && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Select Time Slot</CardTitle>
-                  <CardDescription>Available slots for {bookingData.selectedDate.toDateString()}</CardDescription>
+                  <CardTitle>Select Time Range</CardTitle>
+                  <CardDescription>Choose start and end time for {bookingData.selectedDate.toDateString()}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-3">
-                    {availableSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={
-                          bookingData.selectedTimeSlot?.time === slot.time
-                            ? "default"
-                            : slot.isAvailable
-                              ? "outline"
-                              : "secondary"
-                        }
-                        disabled={!slot.isAvailable}
-                        onClick={() => handleTimeSlotSelect(slot)}
-                        className="h-12"
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">{slot.time}</div>
-                          {slot.isAvailable ? (
-                            <div className="text-xs">₹{slot.price}</div>
-                          ) : (
-                            <div className="text-xs">Booked</div>
-                          )}
-                        </div>
-                      </Button>
-                    ))}
+                <CardContent className="space-y-4">
+                  {/* Start Time Selection */}
+                  <div>
+                    <h4 className="font-semibold mb-2">Start Time</h4>
+                    <div className="grid grid-cols-4 gap-3">
+                      {availableSlots.map((slot) => (
+                        <Button
+                          key={`start-${slot.time}`}
+                          variant={
+                            bookingData.startTimeSlot?.time === slot.time
+                              ? "default"
+                              : slot.isAvailable
+                                ? "outline"
+                                : "secondary"
+                          }
+                          disabled={!slot.isAvailable}
+                          onClick={() => handleTimeSlotSelect(slot, false)}
+                          className="h-12"
+                        >
+                          <div className="text-center">
+                            <div className="font-semibold">{slot.time}</div>
+                            {slot.isAvailable ? (
+                              <div className="text-xs">₹{slot.price}</div>
+                            ) : (
+                              <div className="text-xs">Booked</div>
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* End Time Selection */}
+                  {bookingData.startTimeSlot && (
+                    <div>
+                      <h4 className="font-semibold mb-2">End Time</h4>
+                      <div className="grid grid-cols-4 gap-3">
+                        {availableSlots
+                          .filter(slot => timeToMinutes(slot.time) > timeToMinutes(bookingData.startTimeSlot!.time))
+                          .map((slot) => (
+                            <Button
+                              key={`end-${slot.time}`}
+                              variant={
+                                bookingData.endTimeSlot?.time === slot.time
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() => handleTimeSlotSelect(slot, true)}
+                              className="h-12"
+                            >
+                              <div className="text-center">
+                                <div className="font-semibold">{slot.time}</div>
+                                <div className="text-xs">End</div>
+                              </div>
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Range Display */}
+                  {bookingData.selectedSlots.length > 0 && (
+                    <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
+                      <h4 className="font-semibold text-indigo-800 mb-2">Selected Time Slots:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {bookingData.selectedSlots.map((slot, index) => (
+                          <Badge key={index} variant="default" className="bg-indigo-600">
+                            {slot.time} - ₹{slot.price}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-sm text-indigo-700">
+                        Total Duration: {bookingData.duration} hour{bookingData.duration > 1 ? 's' : ''}
+                        <br />
+                        Total Price: ₹{bookingData.totalPrice}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Duration Selection */}
-            {bookingData.selectedTimeSlot && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Select Duration</CardTitle>
-                  <CardDescription>How long would you like to play?</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[1, 2, 3, 4].map((hours) => (
-                      <Button
-                        key={hours}
-                        variant={bookingData.duration === hours ? "default" : "outline"}
-                        onClick={() => handleDurationChange(hours)}
-                        className="h-12"
-                      >
-                        <div className="text-center">
-                          <div className="font-semibold">
-                            {hours} hour{hours > 1 ? "s" : ""}
-                          </div>
-                          <div className="text-xs">₹{(bookingData.selectedTimeSlot?.price || 0) * hours}</div>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* No duration selection needed - calculated automatically from time range */}
           </div>
 
           {/* Right Column - Booking Summary */}
@@ -508,10 +640,12 @@ export default function BookingPage() {
                       <span className="font-semibold">{bookingData.selectedDate.toDateString()}</span>
                     </div>
                   )}
-                  {bookingData.selectedTimeSlot && (
+                  {bookingData.selectedSlots.length > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Time:</span>
-                      <span className="font-semibold">{bookingData.selectedTimeSlot.time}</span>
+                      <span className="text-gray-600">Time Range:</span>
+                      <span className="font-semibold">
+                        {bookingData.selectedSlots[0].time} - {bookingData.endTimeSlot?.time || minutesToTime(timeToMinutes(bookingData.selectedSlots[0].time) + 60)}
+                      </span>
                     </div>
                   )}
                   {bookingData.duration > 0 && (
@@ -537,7 +671,7 @@ export default function BookingPage() {
                       className="w-full"
                       size="lg"
                       onClick={handleBooking}
-                      disabled={isBooking || !bookingData.selectedDate || !bookingData.selectedTimeSlot}
+                      disabled={isBooking || !bookingData.selectedDate || bookingData.selectedSlots.length === 0}
                     >
                       {isBooking ? (
                         <>

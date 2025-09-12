@@ -1,6 +1,6 @@
 # Enhanced Profile System Documentation
 
-This document describes the enhanced user profile system for QuickCourt, including phone numbers, location, bio, profile photos, and preferences management.
+This document describes the enhanced user profile system for NextWave, including phone numbers, location, bio, profile photos, and preferences management.
 
 ## 🚀 Features
 
@@ -199,7 +199,7 @@ MONGO_URL=your-mongodb-connection
 mongod
 
 # Or use MongoDB Atlas
-MONGO_URL=mongodb+srv://username:password@cluster.mongodb.net/quickcourt
+MONGO_URL=mongodb+srv://username:password@cluster.mongodb.net/nextwave
 ```
 
 ### 3. File Permissions
@@ -313,4 +313,4 @@ For technical support:
 
 **Last Updated**: December 2024  
 **Version**: 1.0.0  
-**Maintainer**: QuickCourt Development Team
+**Maintainer**: NextWave Development Team

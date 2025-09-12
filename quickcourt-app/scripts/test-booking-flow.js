@@ -1,11 +1,11 @@
-// Test script for QuickCourt booking flow
+// Test script for NextWave booking flow
 // This script tests the complete booking process from start to finish
 
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcryptjs');
 
 // MongoDB connection string
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/quickcourt';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost:27017/nextwave';
 
 async function testBookingFlow() {
   const client = new MongoClient(MONGO_URL);

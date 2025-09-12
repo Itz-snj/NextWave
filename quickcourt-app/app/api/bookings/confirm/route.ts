@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { emailService, type BookingEmailData } from "@/lib/email"
 import { dbConnect, Booking, TimeSlot, User, Venue, Court } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
       [bookingData.venueId, 'venueId'],
       [bookingData.courtId || bookingData.court, 'courtId'],
       [bookingData.date, 'date'],
-      [bookingData.time, 'time'],
+      [bookingData.startTime || bookingData.time, 'startTime/time'],
       [bookingData.totalAmount, 'totalAmount'],
     ] as const
     required.forEach(([val, name]) => { 
@@ -62,27 +61,61 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ User, venue, and court verified")
 
-    // Check if the timeslot is still available
-    const existingTimeslot = await TimeSlot.findOne({
-      court: bookingData.courtId || bookingData.court,
-      date: bookingData.date,
-      time: bookingData.time,
-      isAvailable: true
-    })
+    // Handle both single slot and multi-slot bookings
+    const selectedSlots = bookingData.selectedSlots || []
+    const startTime = bookingData.startTime || bookingData.time
+    const endTime = bookingData.endTime
+    
+    if (selectedSlots.length > 0) {
+      // Multi-slot booking - validate all selected slots are available
+      console.log("🔍 Validating multi-slot booking...")
+      
+      for (const selectedSlot of selectedSlots) {
+        const existingTimeslot = await TimeSlot.findOne({
+          court: bookingData.courtId || bookingData.court,
+          date: bookingData.date,
+          time: selectedSlot.time,
+          isAvailable: true
+        })
 
-    if (!existingTimeslot) {
-      console.log("❌ Timeslot not available:", bookingData.date, bookingData.time)
-      return NextResponse.json({ error: "Selected time slot is no longer available" }, { status: 409 })
+        if (!existingTimeslot) {
+          console.log("❌ Timeslot not available:", selectedSlot.time)
+          return NextResponse.json({ 
+            error: `Time slot ${selectedSlot.time} is no longer available` 
+          }, { status: 409 })
+        }
+      }
+      
+      console.log("✅ All selected slots are available")
+    } else {
+      // Single slot booking (backward compatibility)
+      const existingTimeslot = await TimeSlot.findOne({
+        court: bookingData.courtId || bookingData.court,
+        date: bookingData.date,
+        time: startTime,
+        isAvailable: true
+      })
+
+      if (!existingTimeslot) {
+        console.log("❌ Timeslot not available:", startTime)
+        return NextResponse.json({ error: "Selected time slot is no longer available" }, { status: 409 })
+      }
+      
+      console.log("✅ Single timeslot availability confirmed")
     }
-
-    console.log("✅ Timeslot availability confirmed")
 
     const bookingPayload = {
       user: bookingData.userId,
       venue: bookingData.venueId,
       court: bookingData.courtId || bookingData.court,
       date: bookingData.date,
-      time: bookingData.time,
+      startTime: startTime,
+      endTime: endTime,
+      selectedSlots: selectedSlots.map((slot: any) => ({
+        time: slot.time,
+        price: slot.price,
+        _id: slot._id
+      })),
       duration: Number(bookingData.duration || 1),
       totalAmount: Number(bookingData.totalAmount),
       status: 'confirmed',
@@ -100,58 +133,30 @@ export async function POST(request: NextRequest) {
     const created = await Booking.create(bookingPayload)
     console.log("✅ Booking created successfully:", created._id)
 
-    // Mark the timeslot unavailable
-    const timeslotUpdate = await TimeSlot.findOneAndUpdate(
-      { court: created.court, date: created.date, time: created.time }, 
-      { isAvailable: false }
-    )
-    console.log("✅ Timeslot updated:", timeslotUpdate ? "found and updated" : "not found")
-
-    // Prepare email data
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const emailData: BookingEmailData = {
-      customerName: bookingData.customerName || user.name,
-      customerEmail: bookingData.customerEmail || user.email,
-      bookingId: String(created._id),
-      venueName: bookingData.venueName || venue.name,
-      venueLocation: bookingData.venueLocation || venue.location,
-      venueAddress: bookingData.venueAddress || "Address not provided",
-      venuePhone: bookingData.venuePhone || "+1 (555) 123-4567",
-      courtName: bookingData.courtName || court.name,
-      sport: bookingData.sport || court.sport,
-      bookingDate: new Date(bookingData.date).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      bookingTime: bookingData.time,
-      duration: bookingData.duration,
-      totalAmount: bookingData.totalAmount,
-      bookingUrl: `${appUrl}/bookings`,
-      venueUrl: `${appUrl}/venues/${bookingData.venueId}`,
+    // Mark all booked timeslots as unavailable
+    if (selectedSlots.length > 0) {
+      // Multi-slot booking
+      for (const selectedSlot of selectedSlots) {
+        const timeslotUpdate = await TimeSlot.findOneAndUpdate(
+          { court: created.court, date: created.date, time: selectedSlot.time }, 
+          { isAvailable: false }
+        )
+        console.log(`✅ Timeslot ${selectedSlot.time} updated:`, timeslotUpdate ? "found and updated" : "not found")
+      }
+    } else {
+      // Single slot booking (backward compatibility)
+      const timeslotUpdate = await TimeSlot.findOneAndUpdate(
+        { court: created.court, date: created.date, time: startTime }, 
+        { isAvailable: false }
+      )
+      console.log("✅ Timeslot updated:", timeslotUpdate ? "found and updated" : "not found")
     }
 
-    console.log("📧 Preparing email data:", JSON.stringify(emailData, null, 2))
-
-    // Send confirmation email (do not fail the request if email fails)
-    let emailSent = false
-    try {
-      emailSent = await emailService.sendBookingConfirmation(emailData)
-      console.log("📧 Email sending result:", emailSent)
-    } catch (e) {
-      console.warn('❌ Email sending failed', e)
-    }
-
-    if (!emailSent) {
-      console.warn("⚠️ Failed to send booking confirmation email")
-    }
-
+    // Email confirmation can be added later if needed
     console.log("🎉 Booking confirmation completed successfully")
     return NextResponse.json({ 
       success: true, 
       booking: created, 
-      emailSent, 
       message: "Booking confirmed successfully",
       bookingId: String(created._id)
     })

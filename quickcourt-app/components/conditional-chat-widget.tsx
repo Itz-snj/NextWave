@@ -8,22 +8,21 @@ export default function ConditionalChatWidget(): JSX.Element | null {
   const { user } = useAuth()
   const pathname = usePathname()
   
-  // Only show for logged-in users with "user" role
-  if (!user || user.role !== "user") return null
+  // Show for non-logged-in users OR users with "user" role
+  // Hide for admin and owner roles
+  if (user && (user.role === "admin" || user.role === "owner")) {
+    return null
+  }
   
-  // Only show on user-specific pages (not on auth pages, admin pages, owner pages)
-  const isUserPage = pathname && 
-                     !pathname.startsWith('/auth') && 
-                     !pathname.startsWith('/admin') && 
-                     !pathname.startsWith('/owner')
+  // Hide on auth pages, admin pages, and owner pages
+  const isRestrictedPage = pathname && 
+                          (pathname.startsWith('/auth') || 
+                           pathname.startsWith('/admin') || 
+                           pathname.startsWith('/owner'))
   
-  if (!isUserPage) return null
+  if (isRestrictedPage) return null
   
-  return (
-    <div className="fixed bottom-4 left-4 z-[9999] chat-widget-container">
-      <ChatWidget />
-    </div>
-  )
+  return <ChatWidget />
 }
 
 

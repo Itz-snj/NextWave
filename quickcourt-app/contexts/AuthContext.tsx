@@ -25,7 +25,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>
   signup: (userData: any) => Promise<boolean>
   logout: () => void
-  verifyOTP: (otp: string) => Promise<boolean>
+  verifyOTP: (email: string, otp: string) => Promise<boolean>
   updateUser: (userData: User) => void
   isLoading: boolean
 }
@@ -37,12 +37,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for stored user data
-    const storedUser = localStorage.getItem("quickcourt_user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    const initializeAuth = async () => {
+      try {
+        console.log("🔍 AuthContext: Initializing authentication...")
+        const storedUser = localStorage.getItem("quickcourt_user")
+        const storedToken = localStorage.getItem("quickcourt_token")
+        
+        console.log("🔍 AuthContext: Stored data exists:", { 
+          hasUser: !!storedUser, 
+          hasToken: !!storedToken 
+        })
+        
+        if (storedUser && storedToken) {
+          console.log("🔍 AuthContext: Validating session with backend...")
+          // Validate the stored session by making a request to verify user
+          try {
+            const response = await fetch("/api/auth/validate-session", {
+              method: "GET",
+              headers: { 
+                "Authorization": `Bearer ${storedToken}`,
+                "Content-Type": "application/json" 
+              },
+            })
+            
+            console.log("🔍 AuthContext: Session validation response:", response.status)
+            
+            if (response.ok) {
+              const userData = await response.json()
+              console.log("✅ AuthContext: Session valid, setting user:", userData.user.email)
+              setUser(userData.user)
+            } else {
+              console.log("❌ AuthContext: Session invalid, clearing storage")
+              // Session invalid, clear stored data
+              localStorage.removeItem("quickcourt_user")
+              localStorage.removeItem("quickcourt_token")
+              setUser(null)
+            }
+          } catch (error) {
+            // If validation fails, try to use stored user data as fallback
+            console.warn("⚠️ AuthContext: Session validation failed, using stored data:", error)
+            const parsedUser = JSON.parse(storedUser)
+            console.log("🔄 AuthContext: Using fallback user:", parsedUser.email)
+            setUser(parsedUser)
+          }
+        } else {
+          console.log("ℹ️ AuthContext: No stored session found")
+        }
+      } catch (error) {
+        console.error("💥 AuthContext: Auth initialization error:", error)
+      } finally {
+        console.log("🏁 AuthContext: Auth initialization complete, setting loading to false")
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+    
+    initializeAuth()
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -87,12 +136,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOTP = async (otp: string): Promise<boolean> => {
+  const verifyOTP = async (email: string, otp: string): Promise<boolean> => {
     try {
-      // Mock OTP verification - in real app, this would verify with backend
-      console.log("OTP Verification:", otp)
-      if (otp === "123456") {
-        // Mock successful verification
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
         return true
       }
       return false

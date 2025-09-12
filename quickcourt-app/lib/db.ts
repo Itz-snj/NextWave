@@ -95,7 +95,14 @@ const BookingSchema = new Schema({
   venue: { type: Schema.Types.ObjectId, ref: 'Venue', required: true },
   court: { type: Schema.Types.ObjectId, ref: 'Court', required: true },
   date: { type: String, required: true }, // YYYY-MM-DD
-  time: { type: String, required: true }, // HH:mm
+  time: { type: String }, // HH:mm (for backward compatibility)
+  startTime: { type: String }, // HH:mm (start time for multi-slot bookings)
+  endTime: { type: String }, // HH:mm (end time for multi-slot bookings)
+  selectedSlots: [{
+    time: { type: String, required: true },
+    price: { type: Number, required: true },
+    _id: { type: String }
+  }],
   duration: { type: Number, default: 1 },
   totalAmount: { type: Number, required: true },
   status: { type: String, enum: ['confirmed', 'cancelled'], default: 'confirmed' },

@@ -16,7 +16,7 @@ import { User, Phone, MapPin, Camera, ArrowLeft, Upload, X, Edit3, Save, Loader2
 import Link from "next/link"
 
 export default function ProfilePage() {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -39,6 +39,9 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
+    // Don't redirect if still loading auth state
+    if (authLoading) return
+    
     if (!user) {
       router.push("/auth/login")
       return
@@ -57,7 +60,7 @@ export default function ProfilePage() {
         privacyLevel: user.preferences?.privacyLevel ?? 'public'
       }
     })
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const handleSave = async () => {
     if (!user?.id) return
@@ -175,7 +178,7 @@ export default function ProfilePage() {
                 Back
               </Button>
               <Link href="/">
-                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
               </Link>
             </div>
             <div className="flex items-center space-x-4">

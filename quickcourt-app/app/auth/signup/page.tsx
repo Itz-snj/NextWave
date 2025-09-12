@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showOTP, setShowOTP] = useState(false)
   const [otp, setOtp] = useState("")
+  const [isResendingOTP, setIsResendingOTP] = useState(false)
   const { signup, verifyOTP } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -48,7 +49,7 @@ export default function SignupPage() {
         setShowOTP(true)
         toast({
           title: "Account created",
-          description: "Please verify your email with the OTP sent to you. Use 123456 for demo.",
+          description: "Please verify your email with the OTP sent to you.",
         })
       } else {
         toast({
@@ -68,12 +69,47 @@ export default function SignupPage() {
     }
   }
 
+  const handleResendOTP = async () => {
+    setIsResendingOTP(true)
+    try {
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formData.email }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "OTP Resent",
+          description: "A new OTP has been sent to your email",
+        })
+        setOtp("") // Clear current OTP
+      } else {
+        toast({
+          title: "Failed to resend OTP",
+          description: "Please try again",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend OTP. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsResendingOTP(false)
+    }
+  }
+
   const handleOTPVerification = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const success = await verifyOTP(otp)
+      const success = await verifyOTP(formData.email, otp)
       if (success) {
         toast({
           title: "Email verified",
@@ -116,12 +152,21 @@ export default function SignupPage() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   required
-                  placeholder="Enter 6-digit OTP (use 123456 for demo)"
+                  placeholder="Enter 6-digit OTP"
                   maxLength={6}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Verifying..." : "Verify Email"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleResendOTP}
+                disabled={isResendingOTP}
+              >
+                {isResendingOTP ? "Resending..." : "Resend OTP"}
               </Button>
             </form>
           </CardContent>
@@ -134,7 +179,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-indigo-600">QuickCourt</CardTitle>
+          <CardTitle className="text-2xl font-bold text-indigo-600">NextWave</CardTitle>
           <CardDescription>Create your account</CardDescription>
         </CardHeader>
         <CardContent>

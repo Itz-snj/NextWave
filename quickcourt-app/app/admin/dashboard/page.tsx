@@ -149,7 +149,7 @@ export default function AdminDashboard() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
               <Link href="/">
-                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
               </Link>
               <Badge variant="destructive">Admin</Badge>
             </div>
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    label={({ name, value }) => `${name} ${value}`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"

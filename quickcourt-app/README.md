@@ -1,6 +1,6 @@
-# QuickCourt - Sports Facility Booking Platform
+# NextWave - Sports Facility Booking Platform
 
-QuickCourt is a comprehensive full-stack web application built with Next.js that enables sports enthusiasts to discover, book, and manage sports facilities. The platform serves three types of users: regular users who book facilities, facility owners who manage their venues, and administrators who oversee the entire platform.
+NextWave is a comprehensive full-stack web application built with Next.js that enables sports enthusiasts to discover, book, and manage sports facilities. The platform serves three types of users: regular users who book facilities, facility owners who manage their venues, and administrators who oversee the entire platform.
 
 ## Features
 
@@ -42,7 +42,7 @@ QuickCourt is a comprehensive full-stack web application built with Next.js that
 1. Clone the repository:
 \`\`\`bash
 git clone <repository-url>
-cd quickcourt-app
+cd nextwave-app
 \`\`\`
 
 2. Install dependencies:

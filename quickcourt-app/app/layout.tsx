@@ -9,7 +9,7 @@ import ConditionalChatWidget from "@/components/conditional-chat-widget"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "QuickCourt - Sports Facility Booking",
+  title: "NextWave - Sports Facility Booking",
   description: "Book local sports facilities and join matches with others",
     generator: 'v0.dev'
 }

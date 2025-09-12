@@ -29,7 +29,7 @@ const otpEmailTemplate = `
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuickCourt - OTP Verification</title>
+    <title>NextWave - OTP Verification</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -44,12 +44,12 @@ const otpEmailTemplate = `
 <body>
     <div class="container">
         <div class="header">
-            <h1>QuickCourt</h1>
+            <h1>NextWave</h1>
             <p>OTP Verification</p>
         </div>
         <div class="content">
             <h2>Hello!</h2>
-            <p>You have requested to verify your email address for QuickCourt. Please use the following OTP to complete your verification:</p>
+            <p>You have requested to verify your email address for NextWave. Please use the following OTP to complete your verification:</p>
             
             <div class="otp-box">
                 <div class="otp-code">{{otp}}</div>
@@ -64,7 +64,7 @@ const otpEmailTemplate = `
                 </ul>
             </div>
             
-            <p>Best regards,<br>The QuickCourt Team</p>
+            <p>Best regards,<br>The NextWave Team</p>
         </div>
         <div class="footer">
             <p>This is an automated email. Please do not reply.</p>
@@ -83,9 +83,9 @@ export async function sendOTPEmail(email: string, otp: string): Promise<boolean>
     const htmlContent = compiledTemplate({ otp });
     
     const mailOptions = {
-      from: `"QuickCourt" <${process.env.GMAIL_USER}>`,
+      from: `"NextWave" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: 'QuickCourt - OTP Verification Code',
+      subject: 'NextWave - OTP Verification Code',
       html: htmlContent,
     };
 
@@ -106,7 +106,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<boo
       <html>
       <head>
           <meta charset="utf-8">
-          <title>Welcome to QuickCourt</title>
+          <title>Welcome to NextWave</title>
           <style>
               body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -117,11 +117,11 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<boo
       <body>
           <div class="container">
               <div class="header">
-                  <h1>Welcome to QuickCourt!</h1>
+                  <h1>Welcome to NextWave!</h1>
               </div>
               <div class="content">
                   <h2>Hello ${name}!</h2>
-                  <p>Your email has been successfully verified. Welcome to QuickCourt - your premier sports facility booking platform!</p>
+                  <p>Your email has been successfully verified. Welcome to NextWave - your premier sports facility booking platform!</p>
                   <p>You can now:</p>
                   <ul>
                       <li>Browse and book sports facilities</li>
@@ -130,7 +130,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<boo
                       <li>Enjoy seamless sports facility management</li>
                   </ul>
                   <p>Get started by visiting our platform!</p>
-                  <p>Best regards,<br>The QuickCourt Team</p>
+                  <p>Best regards,<br>The NextWave Team</p>
               </div>
           </div>
       </body>
@@ -138,9 +138,9 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<boo
     `;
 
     const mailOptions = {
-      from: `"QuickCourt" <${process.env.GMAIL_USER}>`,
+      from: `"NextWave" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: 'Welcome to QuickCourt - Email Verified!',
+      subject: 'Welcome to NextWave - Email Verified!',
       html: welcomeTemplate,
     };
 

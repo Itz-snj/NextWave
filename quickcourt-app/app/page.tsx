@@ -66,7 +66,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
-                <h1 className="text-2xl font-bold text-indigo-600">QuickCourt</h1>
+                <h1 className="text-2xl font-bold text-indigo-600">NextWave</h1>
               </div>
               <div className="flex space-x-4">
                 <Link href="/auth/login">
@@ -86,7 +86,7 @@ export default function HomePage() {
             <h2 className="text-4xl font-bold text-gray-900 mb-6">Book Sports Facilities & Join Matches</h2>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Discover and book local sports facilities, connect with other players, and enjoy your favorite sports with
-              QuickCourt.
+              NextWave.
             </p>
             <div className="flex justify-center space-x-4">
               <Link href="/auth/signup">
@@ -106,7 +106,7 @@ export default function HomePage() {
         {/* Features */}
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h3 className="text-3xl font-bold text-center mb-12">Why Choose QuickCourt?</h3>
+            <h3 className="text-3xl font-bold text-center mb-12">Why Choose NextWave?</h3>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -144,7 +144,7 @@ export default function HomePage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <h1 className="text-2xl font-bold text-indigo-600">QuickCourt</h1>
+            <h1 className="text-2xl font-bold text-indigo-600">NextWave</h1>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700">Welcome, {user.name}!</span>
               <Link href="/profile">
@@ -281,7 +281,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8">
             {/* Company Info */}
             <div className="col-span-2">
-              <h3 className="text-2xl font-bold text-indigo-400 mb-4">QuickCourt</h3>
+              <h3 className="text-2xl font-bold text-indigo-400 mb-4">NextWave</h3>
               <p className="text-gray-300 mb-4 max-w-md">
                 Your premier platform for booking sports facilities and connecting with fellow sports enthusiasts. 
                 Find, book, and play at the best venues in your area.
@@ -357,7 +357,7 @@ export default function HomePage() {
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2024 QuickCourt. All rights reserved.
+              © 2024 NextWave. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-gray-400 hover:text-indigo-400 transition-colors text-sm">
