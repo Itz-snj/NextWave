@@ -11,9 +11,6 @@ import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { Loader2, LogIn, Trophy } from "lucide-react"
 
-// --- FIX ---
-// AuthLayout is now defined OUTSIDE the LoginPage component.
-// This prevents it from being re-created on every state change.
 const AuthLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
     <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">

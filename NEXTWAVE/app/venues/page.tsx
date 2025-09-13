@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Star, Search, Filter } from "lucide-react"
+import { MapPin, Star, Search, Filter, Trophy, X } from "lucide-react"
 import Link from "next/link"
 
 interface VenueApi {
@@ -19,6 +19,7 @@ interface VenueApi {
   rating?: number
   reviewCount?: number
   image?: string
+  images?: string[]
   amenities?: string[]
   status: "approved" | "pending"
 }
@@ -31,7 +32,6 @@ export default function VenuesPage() {
   const [priceFilter, setPriceFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load from API
   useEffect(() => {
     setIsLoading(true)
     fetch("/api/venues")
@@ -44,35 +44,25 @@ export default function VenuesPage() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  // Filter venues based on search and filters
   useEffect(() => {
-    let filtered = venues
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (venue) =>
-          venue.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (venue.location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (venue.sports || []).some((sport) => sport.toLowerCase().includes(searchTerm.toLowerCase())),
-      )
-    }
+    let filtered = venues.filter(
+      (v) =>
+        v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.location || "").toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
     if (sportFilter !== "all") {
-      filtered = filtered.filter((venue) => (venue.sports || []).includes(sportFilter))
+      filtered = filtered.filter((v) => v.sports?.includes(sportFilter))
     }
 
     if (priceFilter !== "all") {
-      filtered = filtered.filter((venue) => {
-        switch (priceFilter) {
-          case "low":
-            return (venue.priceRange?.max ?? 0) <= 30
-          case "medium":
-            return (venue.priceRange?.min ?? 0) <= 50 && (venue.priceRange?.max ?? 0) > 30
-          case "high":
-            return (venue.priceRange?.min ?? 0) > 50
-          default:
-            return true
+      const [min, max] = priceFilter.split("-").map(Number)
+      filtered = filtered.filter((v) => {
+        const venueMin = v.priceRange?.min ?? 0
+        if (max) {
+            return venueMin >= min && venueMin <= max
         }
+        return venueMin >= min
       })
     }
 
@@ -81,12 +71,20 @@ export default function VenuesPage() {
 
   const allSports = Array.from(new Set(venues.flatMap((venue) => venue.sports || [])))
 
+  const clearFilters = () => {
+    setSearchTerm("")
+    setSportFilter("all")
+    setPriceFilter("all")
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading venues...</p>
+          <div className="bg-emerald-600 p-4 rounded-xl mb-4 inline-block">
+             <Trophy className="h-10 w-10 text-white animate-pulse" />
+          </div>
+          <p className="text-lg text-gray-600">Loading Venues...</p>
         </div>
       </div>
     )
@@ -95,19 +93,20 @@ export default function VenuesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <Link href="/">
-              <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">NextWave</h1>
-            </Link>
+          <div className="flex justify-between items-center py-4">
+             <div className="flex items-center space-x-3">
+                <Link href="/" className="flex items-center space-x-2">
+                  <div className="bg-emerald-600 p-2 rounded-lg">
+                    <Trophy className="h-6 w-6 text-white" />
+                  </div>
+                  <h1 className="hidden md:block text-2xl font-bold text-gray-900">NextWave</h1>
+                </Link>
+            </div>
             <div className="flex items-center space-x-4">
-              <Link href="/bookings">
-                <Button variant="outline">My Bookings</Button>
-              </Link>
-              <Link href="/profile">
-                <Button variant="outline">Profile</Button>
-              </Link>
+              <Link href="/bookings"><Button variant="outline">My Bookings</Button></Link>
+              <Link href="/profile"><Button variant="outline">Profile</Button></Link>
             </div>
           </div>
         </div>
@@ -115,137 +114,92 @@ export default function VenuesPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Sports Venues</h2>
-          <p className="text-gray-600">Discover and book amazing sports facilities near you</p>
-        </div>
+        <section className="text-center py-12 bg-white rounded-2xl shadow-sm mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Find Your Perfect Venue</h1>
+          <p className="text-lg text-gray-600">Discover and book top-rated sports facilities nearby you.</p>
+        </section>
 
         {/* Search and Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <Card className="p-6 mb-8 bg-white rounded-2xl shadow-sm">
+          <div className="grid md:grid-cols-4 gap-4 items-center">
+            <div className="relative md:col-span-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search venues, sports, or locations..."
+                placeholder="Search by venue name or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12"
               />
             </div>
             <Select value={sportFilter} onValueChange={setSportFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Sports" />
-              </SelectTrigger>
+              <SelectTrigger className="h-12"><SelectValue placeholder="All Sports" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sports</SelectItem>
-                {allSports.map((sport) => (
-                  <SelectItem key={sport} value={sport}>
-                    {sport}
-                  </SelectItem>
-                ))}
+                {allSports.map((sport) => <SelectItem key={sport} value={sport}>{sport}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Price Range" />
-              </SelectTrigger>
+              <SelectTrigger className="h-12"><SelectValue placeholder="Price Range" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="low">Under ₹30/hour</SelectItem>
-                <SelectItem value="medium">₹30-50/hour</SelectItem>
-                <SelectItem value="high">Over ₹50/hour</SelectItem>
+                <SelectItem value="0-500">Under ₹500/hr</SelectItem>
+                <SelectItem value="500-1000">₹500 - ₹1000/hr</SelectItem>
+                <SelectItem value="1000-Infinity">Over ₹1000/hr</SelectItem>
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm("")
-                setSportFilter("all")
-                setPriceFilter("all")
-              }}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Clear Filters
-            </Button>
           </div>
-        </div>
+        </Card>
 
-        {/* Results Count */}
-        <div className="mb-6">
-          <p className="text-gray-600">Showing {filteredVenues.length} of {venues.length} venues</p>
+        {/* Results Count and Clear Filters */}
+        <div className="flex justify-between items-center mb-6">
+          <p className="text-gray-600 font-medium">Showing {filteredVenues.length} venues</p>
+          <Button variant="ghost" onClick={clearFilters} className="text-emerald-600 hover:text-emerald-700">
+            <X className="h-4 w-4 mr-2" /> Clear All Filters
+          </Button>
         </div>
 
         {/* Venues Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredVenues.map((venue) => (
-            <Card key={venue._id} className="hover:shadow-lg transition-shadow">
-              <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                <img src={(venue as any).images?.[0] || venue.image || "/placeholder.svg"} alt={venue.name} className="w-full h-full object-cover" />
+            <Card key={venue._id} className="bg-white rounded-2xl overflow-hidden group hover:shadow-xl transition-shadow duration-300">
+              <div className="aspect-video relative overflow-hidden">
+                <img src={venue.images?.[0] || venue.image || "/placeholder.svg"} alt={venue.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute top-3 right-3 bg-white/90 text-yellow-600 px-2 py-1 rounded-md text-sm font-semibold flex items-center">
+                  <Star className="h-4 w-4 fill-current mr-1" /> {venue.rating ?? 4.7}
+                </div>
               </div>
               <CardHeader>
-                <CardTitle className="flex justify-between items-start">
-                  <span className="text-lg">{venue.name}</span>
-                  <div className="flex items-center text-sm text-yellow-600">
-                    <Star className="h-4 w-4 fill-current mr-1" />
-                    {venue.rating ?? 4.7}
-                    <span className="text-gray-500 ml-1">({venue.reviewCount ?? 0})</span>
-                  </div>
-                </CardTitle>
-                <CardDescription>
-                  <div className="flex items-center text-gray-600 mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {venue.location}
-                  </div>
-                  <p className="text-sm mb-3">{venue.description}</p>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {(venue.sports || []).map((sport) => (
-                      <Badge key={sport} variant="secondary" className="text-xs">
-                        {sport}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {(venue.amenities || []).slice(0, 3).map((amenity) => (
-                      <Badge key={amenity} variant="outline" className="text-xs">
-                        {amenity}
-                      </Badge>
-                    ))}
-                    {(venue.amenities || []).length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{(venue.amenities || []).length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-lg font-semibold text-indigo-600">
-                    ₹{venue.priceRange?.min ?? 0}-₹{venue.priceRange?.max ?? 0}/hour
-                  </div>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(venue.sports || []).map((sport) => (
+                    <Badge key={sport} className="bg-emerald-100 text-emerald-800 text-xs">{sport}</Badge>
+                  ))}
+                </div>
+                <CardTitle>{venue.name}</CardTitle>
+                <CardDescription className="flex items-center pt-1">
+                  <MapPin className="h-4 w-4 mr-1.5" /> {venue.location}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href={`/venues/${venue._id}`}>
-                  <Button className="w-full">View Details & Book</Button>
-                </Link>
+                 <div className="flex justify-between items-center">
+                  <div className="text-lg font-bold text-emerald-600">
+                    ₹{venue.priceRange?.min ?? 0}<span className="text-sm font-normal text-gray-500">/hour</span>
+                  </div>
+                  <Link href={`/venues/${venue._id}`}>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700">Book Now</Button>
+                  </Link>
+                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* No Results */}
         {filteredVenues.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No venues found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your search criteria or filters</p>
-            <Button
-              onClick={() => {
-                setSearchTerm("")
-                setSportFilter("all")
-                setPriceFilter("all")
-              }}
-            >
-              Clear All Filters
+          <div className="text-center py-20 bg-white rounded-2xl">
+            <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Venues Found</h3>
+            <p className="text-gray-600 mb-4">Try adjusting your search or clearing the filters.</p>
+            <Button onClick={clearFilters} className="bg-emerald-600 hover:bg-emerald-700">
+              Clear Filters
             </Button>
           </div>
         )}
