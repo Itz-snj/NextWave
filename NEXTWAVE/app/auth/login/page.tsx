@@ -5,12 +5,40 @@ import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { Loader2, LogIn } from "lucide-react"
+import { Loader2, LogIn, Trophy } from "lucide-react"
+
+// --- FIX ---
+// AuthLayout is now defined OUTSIDE the LoginPage component.
+// This prevents it from being re-created on every state change.
+const AuthLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
+    <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex">
+      <div className="absolute inset-0 bg-emerald-800" />
+      <img
+        src="https://images.unsplash.com/photo-1542296332-2e4473faf563?q=80&w=1974&auto=format&fit=crop"
+        alt="Sports stadium"
+        className="absolute inset-0 h-full w-full object-cover opacity-20"
+      />
+      <div className="relative z-20 flex items-center text-2xl font-bold space-x-2">
+        <Trophy className="h-8 w-8" />
+        <span>NextWave</span>
+      </div>
+      <div className="relative z-20 mt-auto">
+        <blockquote className="space-y-2">
+          <p className="text-lg">
+            “The moment of victory is much too short to live for that and nothing else. This platform helps you enjoy the journey.”
+          </p>
+          <footer className="text-sm">- Martina Navratilova (adapted)</footer>
+        </blockquote>
+      </div>
+    </div>
+    <div className="flex items-center justify-center py-12 px-4">{children}</div>
+  </div>
+)
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -26,8 +54,8 @@ export default function LoginPage() {
     
     if (!email || !password) {
       toast({
-        title: "Error",
-        description: "Please enter both email and password",
+        title: "Missing Information",
+        description: "Please enter both email and password.",
         variant: "destructive",
       })
       return
@@ -35,24 +63,24 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const success = await login(email, password)
-      if (success) {
+      const user = await login(email, password)
+      if (user) {
         toast({
-          title: "Login successful",
-          description: "Welcome back to NextWave!",
+          title: "Login Successful!",
+          description: `Welcome back, ${user}!`,
         })
-        router.push("/")
+        router.push("/") 
       } else {
         toast({
-          title: "Login failed",
-          description: "Invalid email or password",
+          title: "Login Failed",
+          description: "Invalid email or password. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "An Error Occurred",
+        description: "Something went wrong during login.",
         variant: "destructive",
       })
     } finally {
@@ -61,68 +89,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-green-600">NextWave</CardTitle>
-          <CardDescription>
-            Sign in to your account
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Enter your email"
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                autoComplete="current-password"
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/auth/signup" className="text-green-600 hover:underline">
-                Sign up
-              </Link>
-            </p>
+    <AuthLayout>
+      <div className="mx-auto grid w-[380px] gap-6">
+        <div className="grid gap-2 text-center">
+           <LogIn className="h-10 w-10 mx-auto text-emerald-600"/>
+          <h1 className="text-3xl font-bold">Welcome Back!</h1>
+          <p className="text-balance text-muted-foreground">
+            Enter your credentials to access your account.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="grid gap-2">
+            <div className="flex items-center">
+              <Label htmlFor="password">Password</Label>
+              <Link href="#" className="ml-auto inline-block text-sm underline text-emerald-600">
+                Forgot your password?
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </form>
+        <div className="mt-4 text-center text-sm">
+          Don&apos;t have an account?{" "}
+          <Link href="/auth/signup" className="underline text-emerald-600 font-semibold">
+            Sign up
+          </Link>
+        </div>
+      </div>
+    </AuthLayout>
   )
 }
