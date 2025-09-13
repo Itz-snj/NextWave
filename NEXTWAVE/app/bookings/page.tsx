@@ -42,7 +42,9 @@ export default function MyBookingsPage() {
     const load = async () => {
       const res = await fetch(`/api/bookings?user=${(user as any)?.id || (user as any)?._id}`)
       const data = await res.json()
-      setBookings(Array.isArray(data) ? data : [])
+      // Filter out bookings with missing venue/court data
+      const validBookings = Array.isArray(data) ? data.filter(booking => booking.venue && booking.court) : []
+      setBookings(validBookings)
     }
     load()
     setIsLoadingBookings(false)
@@ -102,13 +104,23 @@ export default function MyBookingsPage() {
   }
 
   const isUpcoming = (date: string, time: string) => {
+    if (!date || !time) return false
     const bookingDateTime = new Date(`${date}T${time}`)
     return bookingDateTime > new Date()
   }
 
-  const upcomingBookings = bookings.filter((b) => b.status === 'confirmed' && isUpcoming(b.date, b.time))
+  const upcomingBookings = bookings.filter((b) => 
+    b.status === 'confirmed' && 
+    b.venue && 
+    b.court && 
+    isUpcoming(b.date, b.time)
+  )
 
-  const pastBookings = bookings.filter((b) => b.status === 'cancelled' || (b.status === 'confirmed' && !isUpcoming(b.date, b.time)))
+  const pastBookings = bookings.filter((b) => 
+    b.venue && 
+    b.court && 
+    (b.status === 'cancelled' || (b.status === 'confirmed' && !isUpcoming(b.date, b.time)))
+  )
 
   if (isLoading || isLoadingBookings) {
     return (
@@ -173,11 +185,13 @@ export default function MyBookingsPage() {
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{booking.venue.name}</CardTitle>
+                          <CardTitle className="text-lg">
+                            {booking.venue?.name || "Venue not available"}
+                          </CardTitle>
                           <CardDescription>
                             <div className="flex items-center mt-1">
                               <MapPin className="h-4 w-4 mr-1" />
-                              {booking.venue.location}
+                              {booking.venue?.location || "Location not available"}
                             </div>
                           </CardDescription>
                         </div>
@@ -191,26 +205,28 @@ export default function MyBookingsPage() {
                         <div className="space-y-2">
                           <div className="flex items-center">
                             <span className="font-semibold mr-2">Court:</span>
-                             <span>{booking.court.name}</span>
+                            <span>{booking.court?.name || "Court not available"}</span>
                             <Badge variant="secondary" className="ml-2">
-                              {booking.court.sport}
+                              {booking.court?.sport || "Sport not specified"}
                             </Badge>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-2" />
-                            <span>{new Date(booking.date).toLocaleDateString()}</span>
+                            <span>
+                              {booking.date ? new Date(booking.date).toLocaleDateString() : "Date not available"}
+                            </span>
                           </div>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-2" />
                             <span>
-                              {booking.time} ({booking.duration} hour{booking.duration > 1 ? "s" : ""})
+                              {booking.time || "Time not available"} ({booking.duration || 0} hour{(booking.duration || 0) > 1 ? "s" : ""})
                             </span>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-sm text-gray-600">Total Paid</div>
-                             <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount}</div>
+                            <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount || 0}</div>
                           </div>
                           <div className="space-x-2">
                             <Button variant="destructive" size="sm" onClick={() => handleCancelBooking(booking._id)}>
@@ -243,11 +259,13 @@ export default function MyBookingsPage() {
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{booking.venue.name}</CardTitle>
+                          <CardTitle className="text-lg">
+                            {booking.venue?.name || "Venue not available"}
+                          </CardTitle>
                           <CardDescription>
                             <div className="flex items-center mt-1">
                               <MapPin className="h-4 w-4 mr-1" />
-                              {booking.venue.location}
+                              {booking.venue?.location || "Location not available"}
                             </div>
                           </CardDescription>
                         </div>
@@ -261,26 +279,28 @@ export default function MyBookingsPage() {
                         <div className="space-y-2">
                           <div className="flex items-center">
                             <span className="font-semibold mr-2">Court:</span>
-                             <span>{booking.court.name}</span>
+                            <span>{booking.court?.name || "Court not available"}</span>
                             <Badge variant="secondary" className="ml-2">
-                              {booking.court.sport}
+                              {booking.court?.sport || "Sport not specified"}
                             </Badge>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-2" />
-                            <span>{new Date(booking.date).toLocaleDateString()}</span>
+                            <span>
+                              {booking.date ? new Date(booking.date).toLocaleDateString() : "Date not available"}
+                            </span>
                           </div>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-2" />
                             <span>
-                              {booking.time} ({booking.duration} hour{booking.duration > 1 ? "s" : ""})
+                              {booking.time || "Time not available"} ({booking.duration || 0} hour{(booking.duration || 0) > 1 ? "s" : ""})
                             </span>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-sm text-gray-600">Total Paid</div>
-                             <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount}</div>
+                            <div className="text-2xl font-bold text-indigo-600">₹{booking.totalAmount || 0}</div>
                           </div>
                           {/* Add review flow later if needed */}
                         </div>

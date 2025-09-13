@@ -29,6 +29,31 @@ export default function OwnerBookingsPage() {
   const [selectedVenueId, setSelectedVenueId] = useState<string>("all")
   const [bookings, setBookings] = useState<BookingDTO[]>([])
   const [search, setSearch] = useState("")
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming")
+
+  const isUpcoming = (date: string, time: string) => {
+    if (!date) return false
+    
+    try {
+      // Handle DD/MM/YYYY format
+      const [day, month, year] = date.split('/')
+      if (!day || !month || !year) return false
+      
+      // Create date in YYYY-MM-DD format
+      const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      
+      // If no time provided, assume end of day
+      const timeToUse = time || "23:59"
+      
+      const bookingDateTime = new Date(`${formattedDate}T${timeToUse}:00`)
+      const now = new Date()
+      
+      return bookingDateTime > now
+    } catch (error) {
+      console.error('Error parsing date/time:', { date, time, error })
+      return false
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -57,19 +82,29 @@ export default function OwnerBookingsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return bookings
-    return bookings.filter((b) => {
-      const venueName = typeof b.venue === "string" ? "" : (b.venue?.name || "")
-      const courtName = typeof b.court === "string" ? "" : (b.court?.name || "")
-      return (
-        venueName.toLowerCase().includes(q) ||
-        courtName.toLowerCase().includes(q) ||
-        b.date.includes(q) ||
-        b.time.includes(q) ||
-        String(b.totalAmount).includes(q)
-      )
+    let filteredBookings = bookings
+    
+    // Filter by search query
+    if (q) {
+      filteredBookings = bookings.filter((b) => {
+        const venueName = typeof b.venue === "string" ? "" : (b.venue?.name || "")
+        const courtName = typeof b.court === "string" ? "" : (b.court?.name || "")
+        return (
+          venueName.toLowerCase().includes(q) ||
+          courtName.toLowerCase().includes(q) ||
+          b.date.includes(q) ||
+          b.time.includes(q) ||
+          String(b.totalAmount).includes(q)
+        )
+      })
+    }
+    
+    // Filter by upcoming/past
+    return filteredBookings.filter((b) => {
+      const upcoming = isUpcoming(b.date, b.time)
+      return activeTab === "upcoming" ? upcoming : !upcoming
     })
-  }, [bookings, search])
+  }, [bookings, search, activeTab, isUpcoming])
 
   const cancelBooking = async (bookingId: string) => {
     const ok = window.confirm("Cancel this booking?")
@@ -102,6 +137,30 @@ export default function OwnerBookingsPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Tabs for Upcoming/Past */}
+      <div className="flex space-x-1 mb-6">
+        <button
+          onClick={() => setActiveTab("upcoming")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "upcoming"
+              ? "bg-blue-100 text-blue-700 border border-blue-200"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          }`}
+        >
+          Upcoming ({bookings.filter(b => isUpcoming(b.date, b.time)).length})
+        </button>
+        <button
+          onClick={() => setActiveTab("past")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "past"
+              ? "bg-blue-100 text-blue-700 border border-blue-200"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          }`}
+        >
+          Past ({bookings.filter(b => !isUpcoming(b.date, b.time)).length})
+        </button>
       </div>
 
       <div className="bg-card rounded-md border">

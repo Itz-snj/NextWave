@@ -192,18 +192,30 @@ export default function BookingPage() {
       
       try {
         const date = bookingData.selectedDate.toISOString().slice(0, 10)
+        console.log('🔍 USER BOOKING: Loading slots for:', { 
+          venue: bookingData.venue._id, 
+          court: bookingData.court._id, 
+          date 
+        })
+        
         // Hide past slots and clean up passed ones
         const res = await fetch(`/api/timeslots?venue=${bookingData.venue._id}&court=${bookingData.court._id}&date=${date}&cleanup=1`)
+        console.log('🔍 USER BOOKING: API response status:', res.status)
+        
         if (!res.ok) {
           throw new Error('Failed to load time slots')
         }
         const data = await res.json()
+        console.log('🔍 USER BOOKING: Raw API data:', data)
+        console.log('🔍 USER BOOKING: Data type:', typeof data, 'Is array:', Array.isArray(data))
+        
         const slots = (data || []).map((s: any) => ({ 
           _id: s._id,
           time: s.time, 
           price: s.price, 
           isAvailable: s.isAvailable 
         }))
+        console.log('🔍 USER BOOKING: Processed slots:', slots)
         setAvailableSlots(slots)
         
         const qTime = search.get('time')

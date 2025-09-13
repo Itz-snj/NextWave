@@ -143,6 +143,7 @@ export default function OwnerTimeSlotsPage() {
   };
 
   const toggleAvailable = async (slot: any) => {
+    console.log("Toggling slot", slot);
     await fetch(`/api/timeslots/${slot._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
