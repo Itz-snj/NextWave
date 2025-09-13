@@ -23,10 +23,10 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => (
         alt="Sports field"
         className="absolute inset-0 h-full w-full object-cover opacity-20"
       />
-      <div className="relative z-20 flex items-center text-2xl font-bold space-x-2">
+      <Link href="/"> <div className="relative z-20 flex items-center text-2xl font-bold space-x-2">
         <Trophy className="h-8 w-8" />
         <span>NextWave</span>
-      </div>
+      </div></Link>
       <div className="relative z-20 mt-auto">
         <blockquote className="space-y-2">
           <p className="text-lg">
