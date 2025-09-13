@@ -39,7 +39,6 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    // Don't redirect if still loading auth state
     if (authLoading) return
     
     if (!user) {
@@ -113,23 +112,81 @@ export default function ProfilePage() {
     const file = event.target.files?.[0]
     if (!file || !user?.id) return
 
+    // Validate file type and size
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validImageTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a valid image file (JPEG, PNG, or WebP).",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('userId', user.id)
-      formData.append('avatar', file)
+      // Get signature from our API
+      const sigRes = await fetch('/api/uploads/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'avatars' }),
+      })
+      
+      if (!sigRes.ok) {
+        const errorText = await sigRes.text()
+        throw new Error(`Failed to get upload signature: ${sigRes.status}`)
+      }
+      
+      const { timestamp, signature, apiKey, cloudName, folder } = await sigRes.json()
 
-      const response = await fetch('/api/profile/upload-avatar', {
+      // Upload to Cloudinary
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('api_key', apiKey)
+      formData.append('timestamp', timestamp.toString())
+      formData.append('signature', signature)
+      formData.append('folder', folder)
+
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData,
+      })
+
+      if (!uploadRes.ok) {
+        const errorText = await uploadRes.text()
+        throw new Error(`Upload failed: ${uploadRes.status} - ${errorText}`)
+      }
+
+      const uploadResult = await uploadRes.json()
+      const avatarUrl = uploadResult.secure_url
+
+      // Update user profile with new avatar URL
+      const response = await fetch('/api/profile/update-avatar', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          avatar: avatarUrl
+        }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        setProfileData(prev => ({ ...prev, avatar: data.avatar }))
+        setProfileData(prev => ({ ...prev, avatar: avatarUrl }))
         if (updateUser) {
-          updateUser({ ...user, avatar: data.avatar })
+          updateUser({ ...user, avatar: avatarUrl })
         }
         toast({
           title: "Avatar updated",
@@ -137,15 +194,17 @@ export default function ProfilePage() {
         })
       } else {
         toast({
-          title: "Upload failed",
-          description: data.error || "Failed to upload avatar. Please try again.",
+          title: "Update failed",
+          description: data.error || "Failed to update avatar. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error('Avatar upload failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       toast({
-        title: "Error",
-        description: "Failed to upload avatar. Please try again.",
+        title: "Upload failed",
+        description: `Failed to upload avatar: ${errorMessage}`,
         variant: "destructive",
       })
     } finally {
